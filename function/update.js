@@ -35,7 +35,7 @@ export default async (manual = false) => {
   for (const p of [proxy, ...proxyList.filter(x => x !== proxy)]) {
     try {
       // ↓↓↓ 这里改成你的 GitHub 仓库 raw 地址 ↓↓↓
-      const url = `${p}https://raw.githubusercontent.com/你的用户名/你的仓库名/分支名/manifest.json`;
+      const url = `${p}https://raw.githubusercontent.com/qiuli-7777/wuhuamixian/main/manifest.json`;
       const res = await fetch(url);
       if (res.ok) {
         remoteManifest = await res.json();
@@ -93,7 +93,7 @@ export default async (manual = false) => {
       prog.setFileName(`正在下载：${file}`);
       prog.setProgressValue(i + 1);
 
-      const url = `${proxy}https://raw.githubusercontent.com/你的用户名/你的仓库名/分支名/${file}`;
+      const url = `${proxy}https://raw.githubusercontent.com/qiuli-7777/wuhuamixian/main/${file}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`下载失败 ${file}`);
 
