@@ -1,0 +1,349 @@
+.winBg{/*背景图*/
+    width:100%;
+    height:100%;
+    left:0px;
+    top:0px;
+    z-index:8;
+    background-image:url('./image/winBg.png');
+    background-size:100% 100%;
+}
+.winBg>.winBgHide{/*与页面菜单重合的背景*/
+    top:50%;
+	left:50%;
+	height:85.4%;
+	width:66.9%;
+	transform:translate(-50%, -50%);
+	background-image:url('./image/bigBg.png');
+    background-size:100% 100%;
+}
+.winBg>.winBgHide>.modeText{/*标题文字*/
+    font-family:'yuanli';
+    color:#6b4224;
+    font-size:47px;
+    position:relative;
+	left:19.9%;
+	top:10%;
+	text-shadow:none;
+}
+.winBg>.winBgHide>.playHead{/*玩家场次及胜场*/
+    top: 23%;
+    left:20.2%;
+    font-size:19px;
+    color:#6b4224;
+    text-shadow:none;
+    font-family:'yuanli';
+}
+.winBg>.winBgHide>.playerStatsBtn { /* 仅自己 */
+    background-image: url('./image/bpPlan.png');
+    background-size: 100% 100%;
+    position: absolute;
+    bottom: 73%;
+    right: 15.5%;
+    width: 12.5%;
+    height:5.5%;
+    font-family: 'yuanli';
+    color: #e3b88b;
+    font-size: 16px;
+    text-align: center;
+    line-height: 30px;
+    cursor: pointer;
+    text-shadow:none;
+}
+.winBg>.winBgHide>.playerStatsBtn.active { /*仅自己点击*/
+    background-image: url('./image/bpPlanLight.png');
+    color: #805c34;
+}
+.winBg>.winBgHide>.sousuo{/*搜索按钮*/
+    background-image: url('./image/bpSousuo.png');
+    background-size: 100% 100%;
+    bottom: 73%;
+    right: 29%;
+    width: 17.23%;
+    height: 5.5%;
+}
+.winBg>.winBgHide>.dataLbtn{/*数据按钮*/
+    background-image: url('./image/dataLbtn.png');
+    background-size: 100% 100%;
+    bottom: 73%;
+    right: 1.7%;
+    width: 12.5%;
+    height: 5%;
+}
+.sousuoInput{/*输入文本框*/
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    top: 5%;
+    width: 60%;
+    height: 10%;
+    font-size: 30px;
+    display: none;
+}
+.winBg>.winBgHide>.close{/*关闭按钮*/
+    background-image: url('./image/bpClose.png');
+    background-size: 100% 100%;
+    top: 3.5%;
+    right: 2%;
+    width: 35px;
+    height:35px;
+}
+.winBg>.winBgHide>.leftBg{/*左侧背景*/
+    background-image: url('./image/bpChoosePackBg.png');
+    background-size: 100% 100%;
+    top:4%;
+    left:0.1%;
+    height:92%;
+    width:18.5%;
+    overflow-y:auto;
+    overflow-x:hidden;
+    display: block;
+}
+.winBg>.winBgHide>.rightBg{/*右侧背景*/
+    right:1.7%;
+    bottom:4%;
+    height:63%;
+    width:78.5%;
+    overflow-y:auto;
+    overflow-x:hidden;
+    background-color:rgb(20,0,0,0.1);
+}
+.winBg>.winBgHide>.rightTop{/*右侧上方*/
+    bottom:67%;
+    background-color:rgb(170,136,100,0.8);
+    height:5%;
+    right:1.7%;
+    width:78.5%;
+    text-shadow:none;
+}
+.winBg>.winBgHide>.rightTop>.textBg{/*文字横条*/
+    left:calc(2% + 141px);
+    width:calc(98% - 141px);
+    height:100%;
+    top:0%;
+}
+.winBg>.winBgHide>.rightTop>.textBg>.text{/*每个信息*/
+    width:20%;
+    text-align: center;
+    font-family:'yuanli';
+    color:#6b4224;
+    font-size:18px;
+    position:relative;
+    transform:translateY(-50%);
+	top:50%;
+}
+.winBg>.winBgHide>.rightTop>.wjTop{/*上方文字（武将）*/
+    text-align: center;
+    font-family:'yuanli';
+    color:#6b4224;
+    font-size:18px;
+    position:relative;
+    height:100%;
+    width:85px;
+    left:calc(2.05% + 25.625px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.winBg>.winBgHide>.leftBg>.modeLbtn{/*模式名称*/
+    text-align: center;
+    align-items: center;
+    font-family:'yuanli';
+    color:#805c34;
+    position:relative;
+	font-weight:580;
+	display: block;
+	font-size: 25px;
+	height:9.41%;
+	text-shadow:none;
+	width:100%;
+	padding-top: 20px;
+}
+.winBg>.winBgHide>.leftBg>.modeLbtn::before{/*模式名下划线*/
+	content:"";
+	background-image:url("./image/bpCharacterPackLine.png");
+	line-height: 15;
+	background-size:100% 100%;
+	width:90%;
+	height:1px;
+	position:absolute;
+	bottom:-1px;
+	transform:translateX(-50%);
+	left:50%;
+}
+.winBg>.winBgHide>.leftBg>.modeLbtn.active{/*模式名点击效果*/
+    background-image:url("./image/bpCharacterPack.png");
+	background-size:100% 100%;
+    color:#805c34;
+}
+.winBg>.winBgHide>.rightBg>.characterBg>.xinxiBg {/*信息，没有底图，为了跟上方文字对应上*/
+    left: calc(2.04% + 123px);
+    width: calc(99.96% - 123px);
+    height: 101px;
+    bottom: 0%;
+}
+.winBg>.winBgHide>.rightBg>.characterBg>.xinxiBg>.xinxiText {/*每个信息*/
+    width: 20%;
+    text-align: center;
+    font-family: 'yuanli';
+    color: #905c37;
+    position: relative;
+    transform: translateY(-50%);
+    top: 50%;
+    font-size: 20px;
+    text-shadow: none;
+}
+.sort-arrow {/*箭头*/
+    display: inline-block;
+    margin-left: 8px;
+}
+.sort-arrow.active {/*箭头反转*/
+    transform: rotate(180deg);
+}
+.winBg>.winBgHide>.rightBg>.characterBg{/*武将整条信息栏*/
+    margin-top:10px;
+    left:2%;
+    width: calc(96% - 20px);
+    position:relative;
+    padding-left:20px;
+    border-radius: 5px;
+    height:101px;
+    background-image:url("./image/charge.png");
+	background-size:100% 100%;
+}
+.winBg>.winBgHide>.rightBg>.characterBg>.characterHead{/*武将边框*/
+    background-image:url("./image/characterHead.png");
+	background-size:100% 100%;
+	width:85px;
+	height:85px;
+	position:relative;
+	margin:8px;
+}
+.winBg>.winBgHide>.rightBg>.characterBg>.characterHead>.characterName{/*武将名*/
+    background-image:url("./image/bpCharacterName.png");
+	background-size:100% 100%;
+	width:25%;
+	height:95%;
+	font-size:14px;
+	align-items: center;
+    justify-content: center;
+	font-family:'yuanli';
+}
+.winBg>.winBgHide>.rightBg>.characterBg>.characterHead>.characterImage{/*武将图*/
+    background-size:100% 100%;
+    height:95%;
+    width:95%;
+    top:50%;
+	left:50%;
+	transform:translate(-50%, -50%);
+	pointer-events: auto;
+    cursor: pointer;
+}
+
+/*第二页面（数据管理）*/
+
+.dataBg{/*大背景*/
+    width:100%;
+    height:100%;
+    left:0px;
+    top:0px;
+    z-index:9;
+    background-color:rgb(0,0,0,0.8);
+}
+.dataBg>.dataImage{/*底图*/
+    background-image:url('./image/bpPlansBg.png');
+    background-size:100% 100%;
+    top:50%;
+    left:50%;
+    height:70%;
+    width:18%;
+    transform:translate(-50%, -50%);
+}
+.dataBg>.dataImage>.dataLbtns{/*所有按钮的底板*/
+    top:13%;
+    left:0;
+    height:75%;
+    width:93%;
+    overflow-y:auto;
+    overflow-x:hidden;
+    display: block;
+}
+.dataBg>.dataImage>.dataLbtns>.lbtn{/*每个按钮*/
+    background-image: url('./image/bpPlan.png');
+    background-size: 100% 100%;
+    position: relative;
+    display: flex;
+    height: 15%;
+    text-shadow: none;
+    width: 75%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 14%;
+    align-items: center;
+    color: #e3b88b;
+}
+.dataBg>.dataImage>.dataLbtns>.lbtn:active{/*按钮点击效果*/
+    background-image: url('./image/bpPlanLight.png');
+    color: #805c34;
+}
+.dataBg>.dataImage>.dataLbtns>.lbtn>.text{/*按钮上的文字*/
+    text-align: center;
+    width: 100%;
+    display: inline-block;
+    font-family: 'yuanli';
+    font-size: 19px;
+    transform: translateY(-50%);
+    top:50%;
+    font-weight:550;
+}
+/*导入数据，合并数据（通用）*/
+.dataBg>.dataChooseBg{/*第二页面小背景图*/
+    background-image: url('./image/bigBg.png');
+    background-size: 100% 100%;
+	top:50%;
+	left:50%;
+	height:410px;
+	width:600px;
+	transform:translate(-50%, -50%);
+}
+.dataBg>.dataChooseBg>.text{/*第二页面顶部文字*/
+	left:50%;
+	transform:translateX(-50%);
+	top:2%;
+	font-size:20px;
+	color: #e3b88b;
+	font-weight:550;
+	text-shadow:none;
+	font-family:'yuanli';
+}
+.dataBg>.dataChooseBg>.dataBigBg{/*第二页面大框*/
+    width:99.5%;
+    left:0.4%;
+    height:89.5%;
+    top:8.9%;
+    overflow-y:auto;
+    overflow-x:hidden;
+    display: block;
+}
+.dataBg>.dataChooseBg>.dataBigBg>.dataBtn{/*按钮*/
+    background-image: url('./image/bpPlan.png');
+    background-size: 100% 100%;
+    position: relative;
+    color: #e3b88b;
+    height: 15%;
+    text-shadow: none;
+    width: 25%;
+    margin-top: 5%;
+    margin-left:6.25%;
+}
+.dataBg>.dataChooseBg>.dataBigBg>.dataBtn>.text{/*按钮文字*/
+    text-align: center;
+    width: 100%;
+    display: inline-block;
+    font-family: 'yuanli';
+    font-size: 19px;
+    transform: translateY(-50%);
+    top:50%;
+    font-weight:550;
+    text-shadow: none;
+}
