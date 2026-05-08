@@ -14,7 +14,7 @@ const characters = {
 		hp: 3,
 		career: "goushu",
 		skills: ["ql_jiuyao", "ql_luoyan"],
-		//isUnseen: true,
+		isUnseen: true,
 		img: "extension/五花米线/skin/ql_jinwu.jpg",
 	},
 	ql_linggui: {

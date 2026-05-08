@@ -7,7 +7,7 @@ const characterSort = {
 	qleliteWarriorl: ["ql_caomao", "ql_caoang", "ql_sunjian","ql_xiahoushang", "qlxiahoulingnv", "qlshenpei", "qltaishici", "qlzhuling", "qlzuoci", "qlzhaoyun", "qlsunquan", "qlsunyi", "qljiangwei", "qlshichangshi", "qlzerong","qlhuangzhong","qljushou","qlxinxianying","qlliyan","qllukang","qlwangjun","ql_xuchu","ql_zhanghe","ql_puyuan","ql_lingtong","qlzoushi","ql_xushao","ql_jiangwan", "ql_liuzhang"],
 	qlshuraReturns: ["qlzhaoxiang"],
 	qlGods: ["qlxizhicai", "qlcaiwenji", "qldaqiao", "qlkaier"],
-	qlwuhua: ["ql_guoping", "ql_yaya", "ql_baishi", "ql_tuma", "ql_taozi", "ql_qingongbo", "ql_bianzhong", "ql_shuijingbei", "qlxuejing", "qlligui", "qlweisuojiaju", "qlfuronglu", "qlyucongwang", "qlhuoguomiji", "qlgoujian", "qlchedanbei", "qldashenkan", "qlyexingtongpai", "qlgoujian", "ql_changxingongdeng","qlqianli","qlsilongsifengzuo","ql_wuxing","ql_laoshi","ql_niaozun","ql_shierhua","ql_sushadanyi","ql_wuxianpipa", "ql_xiaoma"],
+	qlwuhua: ["ql_thua", "ql_guoping", "ql_yaya", "ql_baishi", "ql_tuma", "ql_taozi", "ql_qingongbo", "ql_bianzhong", "ql_shuijingbei", "qlxuejing", "qlligui", "qlweisuojiaju", "qlfuronglu", "qlyucongwang", "qlhuoguomiji", "qlgoujian", "qlchedanbei", "qldashenkan", "qlyexingtongpai", "qlgoujian", "ql_changxingongdeng","qlqianli","qlsilongsifengzuo","ql_wuxing","ql_laoshi","ql_niaozun","ql_shierhua","ql_sushadanyi","ql_wuxianpipa", "ql_xiaoma"],
 	qlBoss: ["ql_ying_jihuoyishou","tr_xihe"],
 	qllol: ["ql_kuisangti", "ql_jianmo","ql_zhaoxin","ql_yaheng","ql_weilusi", "ql_efeiliusi"],
 	ql_wait: [],*/
