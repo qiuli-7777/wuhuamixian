@@ -22,6 +22,19 @@ const characterPack = {
 		qlwh: characterSort,
 	},
 	characterSubstitute: {
+		ql_liujin: [
+			["ql_liujin_xz", ["ext:五花米线/skin/ql_liujin_xz.jpg"]],
+			["ql_liujin_qjdw", ["ext:五花米线/skin/ql_liujin_qjdw.jpg"]],
+		],
+		ql_danao: [
+			["ql_danao_xz", ["ext:五花米线/skin/ql_danao_xz.jpg"]],
+			["ql_danao_cf", ["ext:五花米线/skin/ql_danao_cf.jpg"]],
+		],
+		ql_caifeng: [
+			["ql_caifeng_xz", ["ext:五花米线/skin/ql_caifeng_xz.jpg"]],
+			["ql_caifeng_fyx", ["ext:五花米线/skin/ql_caifeng_fyx.jpg"]],
+			["ql_caifeng_xyxh", ["ext:五花米线/skin/ql_caifeng_xyxh.jpg"]],
+		],
 		ql_thua: [
 			["ql_thua_xz", ["ext:五花米线/skin/ql_thua_xz.jpg"]],
 			["ql_thua_xrl", ["ext:五花米线/skin/ql_thua_xrl.jpg"]],

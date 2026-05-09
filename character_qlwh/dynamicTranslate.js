@@ -1,6 +1,29 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
-
 const dynamicTranslates = {
+	ql_zhujia(player, skill) {
+		let str = lib.translate[skill + "_info"];
+		str = str.replace(/（[^）]*）/g, "");
+		const prefix = str.substring(0, str.indexOf("："));
+		let infix, suffix, skillName;
+		if(get.info(skill).derivation.every(skillx => player.getSkills(null, false, false).filter(i => !get.info(i).charlotte).includes(skillx))) {
+			infix = "摸两张牌";
+		} else {
+			for(let i of get.info(skill).derivation) {
+				if(!player.hasSkill(i)) {
+					skillName = i;
+					break;
+				}
+			}
+			infix = `获得『${get.translation(skillName)}』`
+		}
+		const count = player.storage[skill + "_count"] || 0;
+		if(count < 2) {
+			suffix = "增加一点体力上限";
+		} else {
+			suffix = "回复一点体力";
+		}
+		return prefix + infix + "并" + suffix;
+	},
 	ql_yanchu(player, skill) {
 		const str = lib.translate[skill + "_info"];
 		const list = str.split("。");

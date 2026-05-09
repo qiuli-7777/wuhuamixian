@@ -2,6 +2,127 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
+	//云雷纹大铙
+	ql_zhigu: {
+
+	},
+	ql_leimi: {
+
+	},
+	//彩凤鸣岐
+	ql_luoxia: {
+
+	},
+	ql_wanlai: {
+
+	},
+	//鎏金骑士
+	ql_zhujia: {
+		trigger: {
+			player: ["phaseBegin","damageEnd"],
+			source: "damageSource",
+		},
+		forced: true,
+		filter(event, player, name) {
+			return (name == "damageEnd" && !player.countMark("ql_zhujia_append")) || (name != "damageEnd" && !player.countMark("ql_zhujia_attack"));
+		},
+		async content(event, trigger, player) {
+			const { name } = event;
+			const info = get.info(name);
+			if(event.triggername == "damageEnd") {
+				player.addMark(name + "_append");
+			} else {
+				player.addMark(name + "_attack");
+			}
+			if(player.countMark(name + "_append") && player.countMark(name + "_attack")) {
+				player.clearMark(name + "_append");
+				player.clearMark(name + "_attack");
+				if(!info.derivation.every(skill => player.getSkills(null, false, false).filter(i => !get.info(i).charlotte).includes(skill))) {
+					for(let i of info.derivation) {
+						if(!player.hasSkill(i)) {
+							player.addSkills(i);
+							break;
+						}
+					}
+				} else {
+					await player.draw(2);
+				}
+				player.storage.ql_zhujia_count = player.storage.ql_zhujia_count || 0;
+				if(player.storage.ql_zhujia_count < 2) {
+					await player.gainMaxHp();
+					player.storage.ql_zhujia_count++;
+				} else {
+					await player.recover();
+				}
+			}
+		},
+		derivation: ["reganglie", "xinbenxi", "ql_shengshou"],
+		subSkill: {
+			append: {
+				charlotte: true,
+				mark: true,
+				marktext: "守",
+				intro: {
+					name: "守势",
+				},
+			},
+			attack: {
+				charlotte: true,
+				mark: true,
+				marktext: "攻",
+				intro: {
+					name: "攻势",
+				},
+			},
+		},
+	},
+	ql_chuanshuo: {
+		marktext: "伤",
+		intro: {
+			content:"下一次造成伤害+$",
+		},
+		forced: true,
+		trigger: {
+			player: ["gainMaxHpAfter", "loseMaxHpAfter", "changeHpAfter", "recoverAfter"],
+			source: "damageBegin1",
+		},
+		filter(event, player) {
+			switch(event.name){
+				case "damage":
+					return player.countMark("ql_chuanshuo");
+					break;
+				case "recover":
+					return true;
+					break;
+				default:
+					return event.num != 0;
+					break;
+			}
+		},
+		async content(event, trigger, player) {
+			switch(trigger.name){
+				case "damage":
+					trigger.num += player.countMark(event.name);
+					player.clearMark(event.name);
+					break;
+				case "recover":
+					player.addMark(event.name);
+					break;
+				default:
+					await player.draw(Math.abs(trigger.num));
+					break;
+			}
+		},
+	},
+	ql_shengshou: {
+		forced: true,
+		trigger: {
+			player: "recoverBegin",
+		},
+		async content(event, trigger, player) {
+			trigger.num++;
+		},
+	},
 	//死亡移除技能
 	ql_dieRemove: {
 		charlotte: true,

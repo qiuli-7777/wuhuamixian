@@ -1,4 +1,33 @@
 const characters = {
+	ql_liujin: {
+		sex: "male",
+		group: "hua",
+		hp: 5,
+		career: "suwei",
+		skills: ["ql_zhujia", "ql_chuanshuo"],
+		img: "extension/五花米线/skin/ql_liujin.jpg",
+		dieAudios: ["ext:五花米线/audio/die/ql_liujin.mp3"],
+	},
+	ql_danao: {
+		sex: "female",
+		group: "hua",
+		hp: 3,
+		career: "yuanji",
+		skills: ["ql_zhigu", "ql_leimi"],
+		img: "extension/五花米线/skin/ql_danao.jpg",
+		dieAudios: ["ext:五花米线/audio/die/ql_danao.mp3"],
+	},
+	ql_caifeng: {
+		sex: "male",
+		group: "hua",
+		hp: 3,
+		maxHp: 3,
+		hujia: 3,
+		career: "yuanji",
+		skills: ["ql_luoxia", "ql_wanlai"],
+		img: "extension/五花米线/skin/ql_caifeng.jpg",
+		dieAudios: ["ext:五花米线/audio/die/ql_caifeng.mp3"],
+	},
 	ql_thua: {
 		sex: "female",
 		group: "hua",

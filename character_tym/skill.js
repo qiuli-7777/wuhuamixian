@@ -1090,7 +1090,7 @@ const skills = {
             trigger.cancel();
             if(trigger.name == "damage") {
                 if(trigger?.source?.getCards("he")) {
-                    await player.discardPlayerCard(trigger.source, "he", player.isDying() ? [1, 2] : 1);
+                    await player.discardPlayerCard(trigger.source, "he", [1, 2]);
                 }
                 await player.loseHp();
             }

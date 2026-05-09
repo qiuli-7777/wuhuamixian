@@ -1,5 +1,22 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const translates = {
+	ql_liujin: "鎏金骑士",
+	ql_zhujia: "铸甲",
+	ql_zhujia_info: "锁定技，你造成伤害后或回合开始时获得一枚“攻势”标记，你受到伤害后获得一枚“守势”标记，然后若你均有，你移去所有标记（依次执行，至多为4）：①获得『刚烈』②获得『奔袭』③获得『圣手』④摸两张牌并增加一点体力上限，发动两次后修改为回复一点体力。",
+	ql_chuanshuo: "传说",
+	ql_chuanshuo_info: "锁定技，你体力值和体力上限变化一点后摸一张牌。你回复一点体力后令你下一次造成伤害+1。",
+	ql_shengshou: "圣手",
+	ql_shengshou_info: "锁定技，你的回复值+1.",
+	ql_danao: "云雷纹大铙",
+	ql_zhigu: "止鼓",
+	ql_zhigu_info: "一名角色回合开始时，你可以①摸一张牌；②弃置一张牌令其本回合使用牌无距离限制，其本回合造成伤害后，若其本回合已经造成过伤害，其摸一张牌。",
+	ql_leimi: "雷弥",
+	ql_leimi_info: "一名角色成为♠️2-9的牌的目标时，你可以取消之改为令其装备【天雷刃】。",
+	ql_caifeng: "彩凤鸣岐",
+	ql_luoxia: "落霞",
+	ql_luoxia_info: "",
+	ql_wanlai: "万籁",
+	ql_wanlai_info: "",
 	ql_thua: "T型帛画",
 	ql_yinhun: "引魂",
 	ql_yinhun_info: `锁定技，游戏开始时和你失去过牌大于12/20的回合结束之后，你在两名角色间重新召唤${get.poptip({
