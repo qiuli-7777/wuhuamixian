@@ -486,7 +486,7 @@ export async function precontent(config, pack) {
 	lib.element.content.ql_addPlayer = async function(event, trigger, player) {
 		const result = {};
 		event.result = result;
-		const { source, sourceSkill, target, rawPairs, isNext, animate, isControl, dieRemove, startCards, identity, noCheckResult } = event;
+		const { source, sourceSkill, target, rawPairs, isNext, animate, isControl, dieRemove, startCards, identity, noCheckResult, callback } = event;
 		const newPlayer = await game.addPlayerOL(target, ...rawPairs, isNext, { source, animate });
 		result.target = newPlayer;
 
@@ -621,6 +621,9 @@ export async function precontent(config, pack) {
 				[...game.players, ...game.dead].forEach(i => (i.getEnemies = getEnemies));
 			}
 		}, player, newPlayer, source, sourceSkill, identity, noCheckResult);
+		if (callback) {
+			await callback(event, newPlayer);
+		}
 	};
 	//移除角色
 	lib.element.Player.prototype.ql_removePlayer = function(target, config = {}) {
@@ -637,8 +640,11 @@ export async function precontent(config, pack) {
 		return next;
 	}
 	lib.element.content.ql_removePlayer = async function(event, trigger, player) {
-		const { target, source, animate } = event;
+		const { target, source, animate, callback } = event;
 		await game.removePlayerOL(target, { animate });
+		if (callback) {
+			await callback(event, newPlayer);
+		}
 	}
 	// 假设你的扩展配置是 lib.config.extension_五花米线
 	// 那么 config 就是那个对象，你可以用 config.enable 判断

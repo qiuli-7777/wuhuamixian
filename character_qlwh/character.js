@@ -1,4 +1,21 @@
 const characters = {
+	ql_matijin: {
+		sex: "male",
+		group: "hua",
+		hp: 3,
+		skills: ["ql_shuoyao", "ql_jincheng", "ql_linrui"],
+		img: "extension/五花米线/skin/ql_matijin.jpg",
+		dieAudios: ["ext:五花米线/audio/die/ql_matijin.mp3"],
+	},
+	ql_linzhijin: {
+		sex: "male",
+		group: "hua",
+		hp: 1,
+		skills: [],
+		isUnseen: true,
+		img: "extension/五花米线/skin/ql_linzhijin.jpg",
+		dieAudios: ["ext:五花米线/audio/die/ql_linzhijin.mp3"],
+	},
 	ql_liujin: {
 		sex: "male",
 		group: "hua",

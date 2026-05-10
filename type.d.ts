@@ -1,5 +1,5 @@
 import { Library, Game, UI, Get, AI, status, lib } from "noname";
-import { Player } from "nonameElement";
+import { Player, GameEvent } from "nonameElement";
 
 declare module "nonameElement" {
     interface Player {
@@ -32,7 +32,7 @@ declare module "nonameElement" {
          * @param target 要移除的角色
          * @param config 一些别的参数塞这来！
          */
-        ql_removePlayer (target?: Player, config?: removePlayerConfig): GameEvent;
+        ql_removePlayer(target?: Player, config?: removePlayerConfig): GameEvent;
     }
 }
 
@@ -62,10 +62,12 @@ interface addPLayerConfig {
     identity?: string,
     /**不参与胜负结算，默认为false */
     noCheckResult?: boolean,
+    callback?: ((event: GameEvent, player: Player) => PromiseLike<any | void>),
 }
 interface removePlayerConfig {
     /**移除角色的来源，不填就是当前角色 */
     source?: Player,
     /**移除player的动画，有默认动画，自定义动画须返回一个promise；false则不生成动画 */
     animate?: false | ((player: Player) => Promise<any>),
+    callback?: ((event: GameEvent, player: Player) => PromiseLike<any | void>),
 }

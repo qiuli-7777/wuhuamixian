@@ -22,6 +22,10 @@ const characterPack = {
 		qlwh: characterSort,
 	},
 	characterSubstitute: {
+		ql_matijin: [
+			["ql_matijin_xz", ["ext:五花米线/skin/ql_matijin_xz.jpg"]],
+			["ql_matijin_hjy", ["ext:五花米线/skin/ql_matijin_hjy.jpg"]],
+		],
 		ql_liujin: [
 			["ql_liujin_xz", ["ext:五花米线/skin/ql_liujin_xz.jpg"]],
 			["ql_liujin_qjdw", ["ext:五花米线/skin/ql_liujin_qjdw.jpg"]],

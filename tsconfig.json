@@ -16,7 +16,8 @@
       "baseUrl": "./",                      // 用于解析非相对模块名称的基目录
       "paths": {                                   // 路径映射，配合 baseUrl 使用
         "noname":["../../noname.js"],
-        "nonameElement": ["../../node_modules/@types/noname-typings/nonameModules/noname/library/element/index.d.ts"],
+        //"nonameElement": ["../../node_modules/@types/noname-typings/nonameModules/noname/library/element/index.d.ts"],
+        "nonameElement": ["../../noname/library/element/index.js"],
         //"noname":["./noname.d.ts"]
       },
   
