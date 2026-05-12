@@ -646,6 +646,404 @@ export async function precontent(config, pack) {
 			await callback(event, newPlayer);
 		}
 	}
+	lib.element.Player.prototype.ql_chooseMultiPlayerCard = function (config) {
+        const next = game.createEvent('ql_chooseMultiPlayerCard');
+        next.player = this;
+        
+        // 默认值
+        next.players = game.players.slice(0);
+        next.position = 'h';
+        next.visible = false;
+        next.prompt = '选择任意名角色的牌';
+        next.filterCard = lib.filter.all;
+        next.filterOk = null;
+        next.force = false;
+        next.ai = null;
+        next.selectCardPerOwner = undefined;
+        next.selectCard = undefined;
+        
+        // 如果传了 config 对象，预先填充
+        if (config) {
+            if (config.players !== undefined) {
+                next.players = Array.isArray(config.players) ? config.players.slice(0) : [config.players];
+            }
+            if (config.position) next.position = config.position;
+            if (config.visible === 'visible') next.visible = true;
+            if (config.prompt) next.prompt = config.prompt;
+            if (config.filterCard) next.filterCard = config.filterCard;
+            if (config.filterOk) next.filterOk = config.filterOk;
+            if (config.force) next.force = config.force;
+            if (config.ai) next.ai = config.ai;
+            if (config.selectCardPerOwner !== undefined) {
+                next.selectCardPerOwner = config.selectCardPerOwner;
+                next.selectCard = null;
+            } else if (config.selectCard !== undefined) {
+                next.selectCard = config.selectCard;
+            }
+        }
+        
+        next.setContent(lib.element.content.ql_chooseMultiPlayerCard);
+        return next;
+    };
+    //选择任意名角色的牌
+    lib.element.content.ql_chooseMultiPlayerCard = async function (event, trigger, player) {
+        // 从事件本身读取所有配置（支持 .set() 覆盖）
+        let players = event.players;
+        if (!players || (Array.isArray(players) && players.length === 0)) {
+            console.error('chooseMultiPlayerCard: players 未设置或为空');
+            event.result = { bool: false };
+            return;
+        }
+        players = Array.isArray(players) ? players : [players];
+        const positions = event.position || 'h';
+        const visible = event.visible;
+        const prompt = event.prompt || '选择牌';
+        const filterCard = event.filterCard || lib.filter.all;
+        const force = event.force || false;
+        const ai = event.ai || null;
+        const perOwnerCfg = event.selectCardPerOwner;
+        const totalCfg = event.selectCard;
+    
+        const getMaxPerOwner = (owner) => {
+            if (perOwnerCfg === null || perOwnerCfg === undefined) return Infinity;
+            if (typeof perOwnerCfg === 'function') return perOwnerCfg(owner);
+            if (Array.isArray(perOwnerCfg)) return perOwnerCfg[1];
+            return perOwnerCfg;
+        };
+        const getMinPerOwner = (owner) => {
+            if (perOwnerCfg === null || perOwnerCfg === undefined) return 0;
+            if (typeof perOwnerCfg === 'function') return 0;
+            if (Array.isArray(perOwnerCfg)) return perOwnerCfg[0];
+            return perOwnerCfg;
+        };
+    
+        // 收集所有符合条件的牌
+        const cardsWithOwner = [];
+        for (const target of players) {
+            for (const pos of positions) {
+                const cards = target.getCards(pos, filterCard);
+                for (const card of cards) {
+                    cardsWithOwner.push({ card, owner: target, pos });
+                }
+            }
+        }
+        if (cardsWithOwner.length === 0) {
+            event.result = { bool: false, cards: [], owners: [], targets: players };
+            return;
+        }
+    
+        // 分组
+        const ownerMap = new Map();
+        for (const item of cardsWithOwner) {
+            if (!ownerMap.has(item.owner)) ownerMap.set(item.owner, []);
+            ownerMap.get(item.owner).push({ card: item.card, pos: item.pos });
+        }
+        const ownerOrder = [...ownerMap.keys()];
+    
+        // 自动全选（牌数 < 最低要求）
+        const autoCards = [], autoOwners = [];
+        const autoOwnerIds = new Set();
+        for (const owner of ownerOrder) {
+            const items = ownerMap.get(owner);
+            const cards = items.map(i => i.card);
+            const min = getMinPerOwner(owner);
+            if (cards.length > 0 && cards.length < min) {
+                for (const card of cards) {
+                    autoCards.push(card);
+                    autoOwners.push(owner);
+                }
+                autoOwnerIds.add(owner.playerid);
+            }
+        }
+    
+        // 移除自动选过的
+        for (let i = cardsWithOwner.length - 1; i >= 0; i--) {
+            if (autoOwnerIds.has(cardsWithOwner[i].owner.playerid)) cardsWithOwner.splice(i, 1);
+        }
+        for (const id of autoOwnerIds) {
+            const o = ownerOrder.find(x => x.playerid === id);
+            if (o) ownerMap.delete(o);
+        }
+        const remainOwners = ownerOrder.filter(o => !autoOwnerIds.has(o.playerid));
+    
+        // 无剩余牌 → 直接返回
+        if (cardsWithOwner.length === 0) {
+            event.result = { bool: true, cards: autoCards, owners: autoOwners, targets: players };
+            return;
+        }
+    
+        // 计算选择范围
+        const autoCnt = autoCards.length;
+        let selectBtn;
+        if (totalCfg) {
+            const min = Math.max(0, totalCfg[0] - autoCnt);
+            const max = Math.max(0, totalCfg[1] - autoCnt);
+            selectBtn = [min, max];
+        } else {
+            let sumMin = 0, sumMax = 0;
+            for (const o of remainOwners) {
+                sumMin += getMinPerOwner(o);
+                sumMax += Math.min(getMaxPerOwner(o), ownerMap.get(o).length);
+            }
+            selectBtn = [sumMin, sumMax];
+        }
+    
+        // 构建对话框
+        //（暂时分开吧，如果框太高不方便再改成放一起）
+        const dialog = ui.create.dialog(prompt);
+        for (const owner of remainOwners) {
+            const items = ownerMap.get(owner);
+            // 手牌
+            const hCards = items.filter(i => i.pos === 'h').map(i => i.card);
+            if (hCards.length) {
+                dialog.add(`<div class="text center">${get.translation(owner)} 手牌</div>`);
+                if (visible) dialog.add(hCards);
+                else dialog.add([hCards, 'blank']);
+            }
+            // 装备
+            const eCards = items.filter(i => i.pos === 'e').map(i => i.card);
+            if (eCards.length) {
+                dialog.add(`<div class="text center">${get.translation(owner)} 装备</div>`);
+                dialog.add(eCards); // 强制明置
+            }
+            // 判定
+            const jCards = items.filter(i => i.pos === 'j').map(i => i.card);
+            if (jCards.length) {
+                dialog.add(`<div class="text center">${get.translation(owner)} 判定</div>`);
+                dialog.add(jCards); // 强制明置
+            }
+        }
+        
+        // 计数器
+        const ownerSelectedCount = new Map();
+        const updateCount = () => {
+            ownerSelectedCount.clear();
+            for (const btn of ui.selected.buttons) {
+                const link = btn.link;
+                const item = cardsWithOwner.find(i => i.card === link);
+                if (item) {
+                    ownerSelectedCount.set(item.owner, (ownerSelectedCount.get(item.owner) || 0) + 1);
+                }
+            }
+        };
+    
+        // 按钮过滤
+        const filterButton = (button) => {
+            const card = button.link;
+            const item = cardsWithOwner.find(i => i.card === card);
+            if (!item) return false;
+            const cur = ownerSelectedCount.get(item.owner) || 0;
+            if (perOwnerCfg !== undefined && cur >= getMaxPerOwner(item.owner)) return false;
+            if (selectBtn[1] !== Infinity && ui.selected.buttons.length >= selectBtn[1]) return false;
+            return true;
+        };
+    
+        // 确认条件
+        const filterOk = () => {
+            if (perOwnerCfg !== undefined) {
+                for (const o of remainOwners) {
+                    if ((ownerSelectedCount.get(o) || 0) < getMinPerOwner(o)) return false;
+                }
+            }
+            if (ui.selected.buttons.length < selectBtn[0]) return false;
+            if (event.filterOk && !event.filterOk()) return false;
+            return true;
+        };
+    
+        // 选牌
+        const chooseResult = await player.chooseButton(selectBtn, force, dialog)
+            .set('filterButton', filterButton)
+            .set('filterOk', filterOk)
+            .set('ai', ai)
+            .set('custom', {
+                add: { button: updateCount },
+                remove: { button: updateCount },
+            })
+            .forResult();
+    
+        // 合并结果
+        if (chooseResult.bool && chooseResult.links) {
+            const finalCards = [...autoCards];
+            const finalOwners = [...autoOwners];
+            for (const card of chooseResult.links) {
+                const item = cardsWithOwner.find(i => i.card === card);
+                if (item) {
+                    finalCards.push(card);
+                    finalOwners.push(item.owner);
+                }
+            }
+            event.result = { bool: true, cards: finalCards, owners: finalOwners, targets: players };
+        } else if (autoCards.length > 0 && (!force || selectBtn[0] === 0)) {
+            event.result = { bool: true, cards: autoCards, owners: autoOwners, targets: players };
+        } else {
+            event.result = { bool: false };
+        }
+    };
+    //可重复选择角色
+    lib.element.Player.prototype.ql_chooseMultiTarget = function (config) {
+        const next = game.createEvent('ql_chooseMultiTarget');
+        next.player = this;
+    
+        // 默认值
+        next.filterTarget = lib.filter.all;
+        next.prompt = '请选择角色';
+        next.ai = null;
+        next.totalCount = 1;          // 内部会转为 [min, max] 数组
+        next.maxNum = undefined;      // 未设置时默认为总次数的最大值
+        next.filterOk = () => true;
+        next.force = false;
+    
+        // 如果传入了 config 对象，则用其值覆盖默认值
+        if (config) {
+            if (config.filterTarget !== undefined) next.filterTarget = config.filterTarget;
+            if (config.prompt !== undefined) next.prompt = config.prompt;
+            if (config.ai !== undefined) next.ai = config.ai;
+            if (config.totalCount !== undefined) next.totalCount = config.totalCount;
+            if (config.maxNum !== undefined) next.maxNum = config.maxNum;
+            if (config.filterOk !== undefined) next.filterOk = config.filterOk;
+            if (config.force !== undefined) next.force = config.force;
+        }
+    
+        next.setContent(lib.element.content.ql_chooseMultiTarget);
+        return next;
+    };
+    
+    // 对应的 content 函数
+    lib.element.content.ql_chooseMultiTarget = async function (event, trigger, player) {
+        const filter = event.filterTarget || lib.filter.all;
+        const promptText = event.prompt || '请选择角色';
+        const aiFunc = event.ai || null;
+        let total = event.totalCount;
+        if (total === undefined) total = 1;
+        const range = typeof total === 'number' ? [total, total] : (get.itemtype(total) === 'select' ? total : [1, 1]);
+        const perMax = event.maxNum || range[1];
+        const okCheck = event.filterOk || (() => true);
+        const isForced = event.force || false;
+    
+        if (range[0] <= 0) {
+            event.result = { bool: false };
+            game.resume();
+            return;
+        }
+    
+        if (!event.isMine()) {
+            event.result = 'ai';
+            return;
+        }
+    
+        const allTargets = game.players.concat(game.dead);
+        const selectableTargets = allTargets.filter(t => filter(null, player, t));
+        if (!selectableTargets.length) {
+            event.result = { bool: false };
+            game.resume();
+            return;
+        }
+    
+        const targetMap = new Map();
+        let currentTotal = 0;
+        const min = range[0];
+        const max = range[1];
+    
+        const dialog = ui.create.dialog(promptText, 'hidden');
+        dialog.forcebutton = true;
+        dialog.classList.add('noupdate');
+        dialog.open();
+        event.dialog = dialog;
+        event._selectableTargets = selectableTargets;
+        event._targetMap = targetMap;
+        event._currentTotal = 0;
+        event._min = min;
+        event._max = max;
+        event._perMax = perMax;
+        event._okCheck = okCheck;
+        event._isForced = isForced;
+    
+        const hint = ui.create.div('.text.center', '');
+        dialog.content.appendChild(hint);
+        event._hint = hint;
+    
+        selectableTargets.forEach(t => t.classList.add('selectable'));
+    
+        // 根据 force 决定显示“确定”还是“确定+取消”
+        ui.create.confirm(isForced ? 'o' : 'oc');
+        const confirmBtn = ui.confirm;
+    
+        const updateUI = () => {
+            const remain = max - currentTotal;
+            hint.innerHTML = `共需选择 ${min}~${max} 次（每名角色最多 ${perMax} 次）<br>已选 ${currentTotal} 次，还可选 ${remain} 次`;
+            const canConfirm = currentTotal >= min && okCheck(event);
+            if (canConfirm) {
+                confirmBtn.classList.remove('disabled');
+            } else {
+                confirmBtn.classList.add('disabled');
+            }
+        };
+    
+        const cleanup = () => {
+            selectableTargets.forEach(t => t.classList.remove('selectable'));
+            selectableTargets.forEach(t => t.unprompt());
+            if (event.dialog) event.dialog.close();
+            if (event.controls) event.controls.forEach(i => i.close());
+            game.uncheck();
+            game.stopCountChoose();
+        };
+    
+        const finish = (bool) => {
+            if (bool) {
+                const targets = [];
+                targetMap.forEach((count, t) => {
+                    for (let i = 0; i < count; i++) targets.push(t);
+                });
+                event.result = { bool: true, targets, map: new Map(targetMap) };
+            } else {
+                event.result = { bool: false };
+            }
+            cleanup();
+            game.resume();
+        };
+    
+        // “清除选择”按钮
+        const clearControl = ui.create.control([
+            link => {
+                targetMap.clear();
+                currentTotal = 0;
+                selectableTargets.forEach(t => t.unprompt());
+                updateUI();
+            },
+        ].concat(['清除选择', 'stayleft']));
+        event.controls = [clearControl];
+    
+        updateUI();
+    
+        // 重写目标点击：支持重复选择
+        event.custom = event.custom || { add: {}, replace: {} };
+        event.custom.replace.target = function (target, e) {
+            if (!selectableTargets.includes(target)) return;
+            const cur = targetMap.get(target) || 0;
+            if (cur >= perMax) return;
+            if (currentTotal >= max) return;
+    
+            targetMap.set(target, cur + 1);
+            currentTotal++;
+            target.unprompt();
+            target.prompt("×" + (cur + 1), 'orange');
+            updateUI();
+        };
+    
+        // 覆盖原生确认/取消按钮的行为
+        event.custom.replace.confirm = function(bool) {
+            if (bool) {
+                if (currentTotal < min || !okCheck(event)) return;
+                finish(true);
+            } else {
+                if (!isForced) finish(false);
+            }
+        };
+    
+        game.pause();
+        game.countChoose();
+        event.choosing = true;
+    };
 	// 假设你的扩展配置是 lib.config.extension_五花米线
 	// 那么 config 就是那个对象，你可以用 config.enable 判断
 	if (config && config.enable) {

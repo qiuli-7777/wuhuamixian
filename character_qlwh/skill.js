@@ -359,7 +359,27 @@ const skills = {
 		},
 	},
 	ql_leimi: {
-
+		trigger: { global: "useCardToTarget" },
+        filter(event, player) {
+            const num = get.number(event.card);
+            return (
+                get.suit(event.card) == "spade" &&
+                (num >= 2 && num <= 9)
+            );
+        },
+        forced: true,
+        locked: false,
+        async content(event, trigger, player) {
+            const { cards, card, player: target } = trigger;
+            trigger.getParent().excluded.add(player);
+            game.log(card, "对", target, "无效");
+            if (cards.length) {
+                const vcard = get.autoViewAs({ name: "pyzhuren_shandian", cards }, cards);
+                if (target.canEquip(vcard, true)) {
+                    await target.equip(vcard);
+                }
+            }
+        },
 	},
 	//彩凤鸣岐
 	ql_luoxia: {
