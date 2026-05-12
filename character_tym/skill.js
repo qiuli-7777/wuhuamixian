@@ -101,7 +101,7 @@ const skills = {
                 .set("selectTarget", () => {
                     return [1, get.event().num];
                 })
-                .set("prompt", `获得至多${get.translation(get.event().num)}名角色各一张牌`)
+                .set("prompt", `获得至多${get.translation(types.length)}名角色各一张牌`)
                 .set("num", types.length)
                 .set("ai", target => -get.attitude(player, target))
                 .set("forceDie", true) 

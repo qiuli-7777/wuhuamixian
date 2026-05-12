@@ -324,7 +324,9 @@ const skills = {
 		},
 		async cost(event, trigger, player) {
 			event.result = await player.chooseCard()
-			.set("filterCard", true)
+			.set("filterCard", (card) => {
+				return true;
+			})
 			.set("selectCard", [0, 1])
 			.set("prompt", "是否弃置一张牌令其本回合使用牌无次数限制或点确定摸一张牌")
 			.forResult();
@@ -370,8 +372,8 @@ const skills = {
         forced: true,
         locked: false,
         async content(event, trigger, player) {
-            const { cards, card, player: target } = trigger;
-            trigger.getParent().excluded.add(player);
+            const { cards, card, target } = trigger;
+            trigger.getParent().excluded.add(target);
             game.log(card, "对", target, "无效");
             if (cards.length) {
                 const vcard = get.autoViewAs({ name: "pyzhuren_shandian", cards }, cards);
@@ -383,7 +385,154 @@ const skills = {
 	},
 	//彩凤鸣岐
 	ql_luoxia: {
-
+		forced: true,
+		markimage: "image/card/handcard.png",
+		mod: {
+			maxHandcard(player, num) {
+				return num + player.hujia;
+			},
+			targetInRange(card, player, target) {
+				if(player.getStorage("ql_luoxia_effect").includes(target)) {
+					return true;
+				}
+			},
+			globalTo(from, to, distance) {
+				return distance + to.hujia;
+			}
+		},
+		trigger: {
+			player: ["phaseUseBegin", "useCard", "useCardAfter"],
+			source: "damageSource",
+		},
+		filter(event, player, name) {
+			const storage = player.getStorage(event.skill + "_effect");
+			switch(name) {
+				case "useCardAfter":
+					return event?.card?.name == "sha" && storage.some(p => event?.targets?.includes(p));
+					break;
+				case "useCard":
+					return event?.card?.name == "sha" && storage.some(p => {
+						return event?.targets?.includes(p) && player.getHistory("useCard", evt => evt.card.name == "sha" && evt?.targets?.includes(p)).indexOf(event) == 0;
+					});
+					break;
+				case "damageSource":
+					return storage.some(p => p.getHistory("damage", evt => evt?.source == player).indexOf(event) == 0);
+					break;
+				default:
+					return true;
+					break;
+			}
+		},
+		async content(event, trigger, player) {
+			const storage = player.getStorage(event.name + "_effect");
+			switch(event.triggername) {
+				case "useCardAfter":
+					let result = { bool: false };
+					const targets = storage.filter(p => trigger?.targets?.includes(p) && p.isIn() && player.getHistory("useCard", evt => evt.card.name == "sha" && evt?.targets?.includes(p)).length < 3).sortBySeat();
+					if(targets.length) {
+						/*for(let target of targets){
+							const num = player.getHistory("useCard", evt => evt?.targets?.includes(target)).length;
+							await player.draw(num);
+							result = await player.chooseToUse(
+								function (card, player, event) {
+									if(get.name(card) != "sha") {
+										return false;
+									}
+									return lib.filter.filterCard.apply(this, arguments);
+								},
+								target,
+								-1
+							)
+							.set("addCount", false)
+							.set("prompt", `对${get.translation(target)}使用一张【杀】或点取消获得${get.translation(num)}点护甲`)
+							.forResult();
+							if(!result.bool) {
+								await player.changeHujia(num);
+								player.addTempSkill(event.name + "_ban");
+							}
+						}*/
+						const target = targets[-1];
+						const num = player.getHistory("useCard", evt => evt?.targets?.includes(target)).length;
+						await player.draw(num);
+						result = await player.chooseToUse(
+							function (card, player, event) {
+								if(get.name(card) != "sha") {
+									return false;
+								}
+								return lib.filter.filterCard.apply(this, arguments);
+							},
+							target,
+							-1
+						)
+						.set("addCount", false)
+						.set("prompt", `对${get.translation(target)}使用一张【杀】或点取消获得${get.translation(num)}点护甲`)
+						.forResult();
+					}
+					if(!result.bool) {
+						await player.changeHujia(num);
+						player.addTempSkill(event.name + "_ban");
+					}
+					return;
+				case "useCard":
+					trigger.baseDamage++;
+					return;
+				case "damageSource":
+					const result = await player.chooseTarget()
+					.set("filterTarget", (card, player, target) => {
+						return target != get.event().target;
+					})
+					.set("prompt", `令一名${get.translation(trigger.target)}之外的角色失去一点体力`)
+					.set("ai", (target) => {
+						const player = _status.event.player;
+                        return get.effect(target, { name: "losehp" }, player, player);
+					})
+					.set("target", trigger.target)
+					.forResult();
+					if(result.bool) {
+						await result.targets[0].loseHp();
+					}
+					return;
+				default:
+					const num = player?.hujia;
+					if(num > 0) {
+						await player.changeHujia(-num);
+						await player.draw(num);
+					}
+					const result = await player.chooseTarget()
+					.set("filterTarget", (card, player, target) => {
+						return target != player;
+					})
+					.set("prompt", "###落霞###你选择一名其他角色，本回合可对其造成多段伤害")
+					.set("ai", (target) => {
+						const player=get.player();
+                		return -get.attitude(player, target);
+					})
+					.set("forced", true)
+					.forResult();
+					if(result?.bool) {
+						player.addTempSkill(event.name + "_effect");
+						player.markAuto(event.name + "_effect", result.targets[0]);
+					}
+			}
+		},
+		subSkill: {
+			effect: {
+				charlotte: true,
+				intro: {
+            		content: "对$使用牌无距离限制",
+        		},
+			},
+			ban: {
+				charlotte: true,
+				mod:{
+					cardEnabled(card) {
+						if(card.name == "sha") {
+							return false;
+						}
+					}
+				},
+			},
+		},
 	},
 	ql_wanlai: {
 
