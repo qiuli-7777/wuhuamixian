@@ -405,18 +405,18 @@ const skills = {
 			source: "damageSource",
 		},
 		filter(event, player, name) {
-			const storage = player.getStorage(event.skill + "_effect");
+			const storage = player.getStorage("ql_luoxia_effect");
 			switch(name) {
 				case "useCardAfter":
-					return event?.card?.name == "sha" && storage.some(p => event?.targets?.includes(p));
+					return event.card.name == "sha" && storage.some(p => event?.targets?.includes(p));
 					break;
 				case "useCard":
-					return event?.card?.name == "sha" && storage.some(p => {
+					return event.card.name == "sha" && storage.some(p => {
 						return event?.targets?.includes(p) && player.getHistory("useCard", evt => evt.card.name == "sha" && evt?.targets?.includes(p)).indexOf(event) == 0;
 					});
 					break;
 				case "damageSource":
-					return storage.some(p => p.getHistory("damage", evt => evt?.source == player).indexOf(event) == 0);
+					return storage.some(p => p.getHistory("damage", evt => evt?.source == player).indexOf(event) == 0) && game.hasPlayer(current => current != player && current != event.player);
 					break;
 				default:
 					return true;
@@ -426,33 +426,11 @@ const skills = {
 		async content(event, trigger, player) {
 			const storage = player.getStorage(event.name + "_effect");
 			switch(event.triggername) {
-				case "useCardAfter":
+				case "useCardAfter": {
+					const target = storage[storage.length - 1];
 					let result = { bool: false };
-					const targets = storage.filter(p => trigger?.targets?.includes(p) && p.isIn() && player.getHistory("useCard", evt => evt.card.name == "sha" && evt?.targets?.includes(p)).length < 3).sortBySeat();
-					if(targets.length) {
-						/*for(let target of targets){
-							const num = player.getHistory("useCard", evt => evt?.targets?.includes(target)).length;
-							await player.draw(num);
-							result = await player.chooseToUse(
-								function (card, player, event) {
-									if(get.name(card) != "sha") {
-										return false;
-									}
-									return lib.filter.filterCard.apply(this, arguments);
-								},
-								target,
-								-1
-							)
-							.set("addCount", false)
-							.set("prompt", `对${get.translation(target)}使用一张【杀】或点取消获得${get.translation(num)}点护甲`)
-							.forResult();
-							if(!result.bool) {
-								await player.changeHujia(num);
-								player.addTempSkill(event.name + "_ban");
-							}
-						}*/
-						const target = targets[-1];
-						const num = player.getHistory("useCard", evt => evt?.targets?.includes(target)).length;
+					const num = player.getHistory("useCard", evt => evt.card.name == "sha" && evt?.targets?.includes(target)).length;
+					if(target.isIn() && num <= 3) {
 						await player.draw(num);
 						result = await player.chooseToUse(
 							function (card, player, event) {
@@ -473,13 +451,15 @@ const skills = {
 						player.addTempSkill(event.name + "_ban");
 					}
 					return;
-				case "useCard":
+				}
+				case "useCard": {
 					trigger.baseDamage++;
 					return;
-				case "damageSource":
+				}
+				case "damageSource": {
 					const result = await player.chooseTarget()
 					.set("filterTarget", (card, player, target) => {
-						return target != get.event().target;
+						return target != trigger.target && target != player;
 					})
 					.set("prompt", `令一名${get.translation(trigger.target)}之外的角色失去一点体力`)
 					.set("ai", (target) => {
@@ -492,7 +472,8 @@ const skills = {
 						await result.targets[0].loseHp();
 					}
 					return;
-				default:
+				}
+				default: {
 					const num = player?.hujia;
 					if(num > 0) {
 						await player.changeHujia(-num);
@@ -513,6 +494,7 @@ const skills = {
 						player.addTempSkill(event.name + "_effect");
 						player.markAuto(event.name + "_effect", result.targets[0]);
 					}
+				}
 			}
 		},
 		subSkill: {
