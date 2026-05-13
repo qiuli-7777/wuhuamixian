@@ -39,7 +39,7 @@ const characters = {
         group: "ql_door",
         hp: 4,
         maxHp: 4,
-        skills: [],
+        skills: ["ql_jiuwei", "ql_lingbo", "ql_shepo", "ql_meixin"],
     },
     ql_xueshuang: {
         sex: "female",

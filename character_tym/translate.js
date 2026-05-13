@@ -1,5 +1,12 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const translates = {
+    ql_qingjiuqiu: "青九丘",
+    ql_jiuwei: "九尾",
+    ql_jiuwei_info: "锁定技，持恒技，你的体力上限为1。所有角色手牌中的红桃牌对你可见且不可被弃置。你可以将一名角色区域内的一张红桃牌或牌堆顶九张牌中的一张红桃牌当做【桃】使用。",
+    ql_lingbo: "灵波",
+    ql_lingbo_info: "出牌阶段，你可以弃置任意张牌选择等量名角色，这些角色依次选择：①弃置X张牌；②受到X点伤害（X为前面选择过的角色数+1）。最后一名角色直接执行其上一名角色未执行的项。",
+    ql_shepo: "摄魄",
+    ql_shepo_info: "锁定技，一名角色在你体力值变化过的回合内不因此技能失去牌后，你随机获得其一张牌或摸一张牌。",
     ql_qingluo: "青萝",
     ql_wanbu: "蔓补",
     ql_wanbu_info: "出牌阶段限你已损失体力值+1次，你可以重铸手牌中所有：①红色牌；②黑色牌。",
@@ -27,7 +34,6 @@ const translates = {
     ql_zhuofan: "浊帆",
     ql_zhuofan_info: "一名角色结束阶段，你可以摸一张牌并与其交换手牌。你使用牌结算后，若有角色体力值因此变化，你可以获得一名角色一张牌并交给其一张牌。",
     ql_xueshi: "雪氏三姐妹",
-    ql_qingjiuqiu: "青九丘",
     ql_xueying: "雪鹰",
     ql_yingci: "鹰刺",
     ql_yingci_info: "出牌阶段限一次，你使用牌指定目标后，可以摸目标数张牌，若你的手牌数大于所有目标，此牌伤害+1且你本回合对这些角色使用牌不可被响应。",
