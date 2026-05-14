@@ -88,6 +88,7 @@ export async function precontent(config, pack) {
 		}
 	}
 	game.import("card", () => qlwhCardPack);
+	lib.config.all.cards.push("qlwh_card");
 	//导入天涯门武将包
 	let result = await import(`../character_tym/index.js`).catch(e => alert(`在导入武将包“天涯门”时出现错误:\n${e.stack}`));
 	const { characterPack: tymPack } = result;
@@ -797,7 +798,7 @@ export async function precontent(config, pack) {
             const hCards = items.filter(i => i.pos === 'h').map(i => i.card);
             if (hCards.length) {
                 dialog.add(`<div class="text center">${get.translation(owner)} 手牌</div>`);
-                if (visible) dialog.add(hCards);
+                if (visible || owner == game.me) dialog.add(hCards);
                 else dialog.add([hCards, 'blank']);
             }
             // 装备

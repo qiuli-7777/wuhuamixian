@@ -13,10 +13,15 @@ const skills = {
         filter(event, player) {
             return event.filterCard(get.autoViewAs({ name: "tao" }, "unsure"), player, event);
         },
+        onChooseToUse(event) {
+            if (!game.online) {
+                event.set("ql_jiuwei", get.cards(9, true));
+            }
+        },
         chooseButton: {
             dialog(event, player) {
                 const dialog = ui.create.dialog("九尾", "hidden");
-                const cards = get.cards(9, true);
+                const cards = get.event().ql_jiuwei;
                 dialog.add('<div class="text center" style="margin: 0px;">牌堆顶</div>');
                 dialog.add(cards);
                 game.players.slice().sortBySeat().forEach(target => {
@@ -45,7 +50,7 @@ const skills = {
                 if (!owner) {
                     return 5;
                 } else {
-                    return get.effect(owner, { name: "shunshou_copy" }, get.player(), get.player());
+                    return get.attitude(get.player(), owner) > 0 ? 3 : 6;
                 }
             },
             filter(button) {
@@ -77,12 +82,8 @@ const skills = {
         },
         group: ["ql_jiuwei_debuff", "ql_jiuwei_add"],
         init(player, skill) {
-            const next = game.createEvent(skill + "_global", false, get.event());
-            next.player = player;
-            next.setContent(async (event, trigger, player) => {
-                game.players.concat(game.dead).forEach(target => {
-                    target.addSkill("ql_jiuwei_global");
-                });
+            game.players.concat(game.dead).forEach(target => {
+                target.addSkill("ql_jiuwei_global");
             });
         },
         subSkill: {
@@ -117,12 +118,30 @@ const skills = {
                     },
                 },
                 mod: {
+                    canBeDiscarded(card, player, target) {
+                        if (get.suit(card) == "heart") {
+                            return false;
+                        }
+                    },
                     cardDiscardable(card, player) {
                         if (get.suit(card) == "heart") {
                             return false;
                         }
                     }
-                }
+                },
+                trigger: {
+                    player: "enterGame",
+                    global: "phaseBefore",
+                },
+                filter(event, player) {
+                    return event.name != "phase" || game.phaseNumber == 0;
+                },
+                silent: true,
+                async content(event, trigger, player) {
+                    game.players.concat(game.dead).forEach(target => {
+                        target.addSkill("ql_jiuwei_global");
+                    });
+                },
             },
             debuff: {
                 trigger: {
@@ -150,6 +169,7 @@ const skills = {
     },
     ql_lingbo: {
         enable: "phaseUse",
+        usable: 1,
         selectCard: [1, Infinity],
         filterCard: lib.filter.cardDiscardable,
         selectTarget() {
@@ -166,7 +186,9 @@ const skills = {
             let index;
             await game.doAsyncInOrder(targets, async (target, idx) => {
                 let result;
-                if (idx > 0 && idx == targets.length - 1) {
+                if (targets.length == 1) {
+                    result = { index: 2 };
+                } else if (idx > 0 && idx == targets.length - 1) {
                     result = { index: index == 0 ? 1 : 0 };
                 } else {
                     result = await target
@@ -180,14 +202,15 @@ const skills = {
                         .forResult();
                 }
                 index = result.index;
-                if (index == 0) {
-                    return target.chooseToDiscard({
+                if (index % 2 == 0) {
+                    await target.chooseToDiscard({
                         selectCard: idx + 1,
                         position: "he",
                         forced: true,
                     });
-                } else {
-                    return target.damage(idx + 1);
+                }
+                if (index > 0) {
+                    await target.damage(idx + 1);
                 }
             })
         },
