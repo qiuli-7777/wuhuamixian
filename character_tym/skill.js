@@ -2,28 +2,84 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
+    //凌勇
+    ql_qunqi: {
+        trigger: {
+            global: "phaseDrawBegin2",
+        },
+        filter(event, player) {
+            return player.countCards("he", card => get.type2(card) == "equip") && !event.numFixed;
+        },
+        async cost(event, trigger, player) {
+            event.result = await player.chooseCard()
+            .set("filterCard", (card) => {
+                return get.type2(card) == "equip";
+            })
+            .set("position", "he")
+            .set("selectCard", [1, Infinity])
+            .set("prompt", `弃置任意张装备牌令${get.translation(trigger.player)}额外摸两倍的牌且本回合可以额外使用等量张【杀】`)
+            .forResult();
+        },
+        async content(event, trigger, player) {
+            await player.modedDiscard(event.cards);
+            trigger.num += event.cards.length * 2;
+            trigger.player.addTempSkill(event.name + "_effect");
+            trigger.player.addMark(event.name + "_effect", event.cards.length, false);
+        },
+        subSkill: {
+            effect: {
+                mod: {
+                    cardUsable(card, player, num) {
+                        if(card.name == "sha") {
+                            return num + player.countMark("ql_qunqi_effect");
+                        }
+                    }
+                },
+            },
+        },
+    },
+    ql_diance: {
+        trigger: {
+            player: "phaseZhunbeiBegin",
+        },
+        forced: true,
+        filter(event, player) {
+            return !["basic", "trick", "equip"].every(type => player.getCards("h").map(card => get.type2(card, false)).unique().includes(type));
+        },
+        async content(event, trigger, player) {
+            for(let i = 0;i < 5;i++) {
+                await player.draw();
+                if(["basic", "trick", "equip"].every(type => player.getCards("h").map(card => get.type2(card, false)).unique().includes(type))) {
+                    break;
+                }
+            }
+        },
+    },
     //江雾瞳
     ql_erxiang: {
         trigger: {
             global: "roundStart",
         },
-        filter(event, player) {
+        forced: true,
+        /*filter(event, player) {
             const target = player.storage?.ql_erxiang;
             return game.hasPlayer(current => current != player && (target ? current != target : true));
-        },
-        async cost(event, trigger, player) {
-            event.result = await player.chooseTarget()
+        },*/
+        async content(event, trigger, player) {
+            const targeted = player.storage?.ql_erxiang;
+            if(!game.hasPlayer(current => current != player && (targeted ? current != targeted : true))) {
+                delete player.storage.ql_erxiang;
+                return;
+            }
+            const result = await player.chooseTarget()
             .set("filterTarget", (card, player, target) => {
-                const targeted = player.storage?.ql_erxiang;
                 return target != player && ( targeted ? target != targeted : true );
             })
             .set("prompt", "令一名角色本轮使用或打出牌时需弃置一张同名牌否则无效")
             .forResult();
-        },
-        async content(event, trigger, player) {
-            const { targets: [target], name } = event;
+            const { targets: [target] } = result;
             player.storage.ql_erxiang = target;
-            target.addTempSkill(name + "_debuff", { global: "roundEnd" })
+            target.addTempSkill(event.name + "_debuff", { global: "roundEnd" })
         },
         subSkill: {
             debuff: {
@@ -41,9 +97,16 @@ const skills = {
                     .set("prompt", `弃置一张与${get.translation(cardx)}相同牌名的牌否则令${get.translation(cardx)}无效`)
                     .forResult();
                     if(!result.bool) {
-                        if(event.name == "useCard") {
+                        if(trigger.name == "useCard") {
                             trigger.targets.length = 0;
                             trigger.all_excluded = true;
+                        }
+                        if(trigger.name == "respond") {
+                            trigger.cancel();
+                            let evt = trigger.getParent();
+                            if(evt.name == "chooseToRespond") {
+                                evt.result.bool = false;
+                            }
                         }
                     }
                 },
