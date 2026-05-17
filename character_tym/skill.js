@@ -2,6 +2,72 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
+    //江雾瞳
+    ql_erxiang: {
+        trigger: {
+            global: "roundStart",
+        },
+        filter(event, player) {
+            const target = player.storage?.ql_erxiang;
+            return game.hasPlayer(current => current != player && (target ? current != target : true));
+        },
+        async cost(event, trigger, player) {
+            event.result = await player.chooseTarget()
+            .set("filterTarget", (card, player, target) => {
+                const targeted = player.storage?.ql_erxiang;
+                return target != player && ( targeted ? target != targeted : true );
+            })
+            .set("prompt", "令一名角色本轮使用或打出牌时需弃置一张同名牌否则无效")
+            .forResult();
+        },
+        async content(event, trigger, player) {
+            const { targets: [target], name } = event;
+            player.storage.ql_erxiang = target;
+            target.addTempSkill(name + "_debuff", { global: "roundEnd" })
+        },
+        subSkill: {
+            debuff: {
+                charlotte: true,
+                forced: true,
+                trigger: {
+                    player: ["useCard",/* "respond"*/],
+                },
+                async content(event, trigger, player) {
+                    const cardx = trigger.card;
+                    const result = await player.chooseToDiscard()
+                    .set("filterCard", (card) => {
+                        return card.name == cardx.name;
+                    })
+                    .set("prompt", `弃置一张与${get.translation(cardx)}相同牌名的牌否则令${get.translation(cardx)}无效`)
+                    .forResult();
+                    if(!result.bool) {
+                        if(event.name == "useCard") {
+                            trigger.targets.length = 0;
+                            trigger.all_excluded = true;
+                        }
+                    }
+                },
+            },
+        },
+    },
+    ql_jiahui: {
+        trigger: {
+            source: "damageSource",
+            player: "damageEnd",
+        },
+        filter(event, player) {
+            return event.player.isIn();
+        },
+        prompt2(event, player) {
+            return `是否令${get.translation(event.player)}摸一张牌，然后你获得其区域内一张牌`;
+        },
+        async content(event, trigger, player) {
+            await trigger.player.draw();
+            if(trigger.player != player || trigger.player.countCards("ej") > 0) {
+                await player.gainPlayerCard(trigger.player == player ? "ej" : "hej", trigger.player);
+            }
+        },
+    },
     //青九丘
     ql_jiuwei: {
         forced: true,

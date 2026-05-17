@@ -1,5 +1,10 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const translates = {
+    ql_jiangwutong: "江雾瞳",
+    ql_erxiang: "二象",
+    ql_erxiang_info: "锁定技，每轮开始时，你选择一名不为你上一轮【二象】目标其他角色，其本轮使用或打出牌时，需弃置一张同名牌否则取消之。",
+    ql_jiahui: "假惠",
+    ql_jiahui_info: "你造成和受到伤害后，可以令受伤角色摸一张牌，然后你可以获得其区域内一张牌。",
     ql_qingjiuqiu: "青九丘",
     ql_jiuwei: "九尾",
     ql_jiuwei_info: "锁定技，持恒技，你的体力上限为1。所有角色手牌中的红桃牌对你可见且不可被弃置。你可以将一名角色区域内的一张红桃牌或牌堆顶九张牌中的一张红桃牌当做【桃】使用。",
@@ -45,7 +50,7 @@ const translates = {
     ql_shuangci_info: "出牌阶段，你可以失去一点体力标记你已损失体力值+1张牌，你失去一张被标记的牌时摸三张牌，你使用被标记的红色牌无次数限制且不可被响应，被标记的黑色牌无距离限制且伤害+1。",
     ql_linlingning: "林凌宁",
     ql_jijie: "极界",
-    ql_jijie_info: "锁定技，你受到伤害改为流失一点体力并弃置伤害来源两张牌。",
+    ql_jijie_info: "锁定技，你的体力上限为1.你受到伤害改为流失一点体力并弃置伤害来源两张牌。",
     ql_luyou: "鹿佑",
     ql_luyou_info: "你可以将手牌数调整为5视为使用或打出一张基本牌或【无懈可击】。",
     ql_yelingxi: "叶灵曦",
