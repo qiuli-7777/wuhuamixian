@@ -1,10 +1,14 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const translates = {
+    ql_chuanshu: "传书",
+    ql_chuanshu_info: "",
+    ql_dansuan: "胆算",
+    ql_dansuan_info: "",
     ql_lingyong: "凌勇",
     ql_qunqi: "群起",
     ql_qunqi_info: "一名角色摸牌阶段，你可以弃置一张装备牌令其额外摸两张牌且出牌阶段可额外使用一张【杀】（可叠加）。",
     ql_diance: "点册",
-    qk_diance_info: "锁定技，准备阶段，你摸牌直到手牌中有三种类型的牌（单次至多摸至多五张）。",
+    ql_diance_info: "锁定技，准备阶段，你摸牌直到手牌中有三种类型的牌（单次至多摸至多五张）。",
     ql_jiangwutong: "江雾瞳",
     ql_erxiang: "二象",
     ql_erxiang_info: "锁定技，每轮开始时，你选择一名不为你上一轮【二象】目标其他角色，其本轮使用或打出牌时，需弃置一张同名牌否则取消之。",

@@ -1,5 +1,5 @@
 {
-  "version": "1.31",
+  "version": "1.32",
   "files": {
     "audio/background/Take Flight.mp3": "539fb65ad7d7505353133bfbe10860784c887fa3",
     "audio/die/qltaishici.mp3": "5a7148420165ca37b5876e09a0e2ef21a1ccb36c",
@@ -89,9 +89,9 @@
     "character_tym/index.js": "27ca1f28bd4d20b287cacd7ad17ebc0764c1333f",
     "character_tym/intro.js": "11686a3794c1ba38eb9f98616fe0999d3c14aaa4",
     "character_tym/pinyin.js": "69fc7052c927810767753e00b55af92e6de9db42",
-    "character_tym/skill.js": "6e0c1a3e908c6fbc64f67e16b3c360ea47251e8a",
+    "character_tym/skill.js": "d50a7cc5ac1585602eda906de35a84db65c12963",
     "character_tym/sort.js": "28bf0751bde30ba8a8ce0c7d250d01672ac1c4e8",
-    "character_tym/translate.js": "b9c52722096512538188dc1a77435a8652a71afc",
+    "character_tym/translate.js": "4903f440884054a24f72f24d789bcea3810ac403",
     "character_tym/voices.js": "b25b8a3b9d91a0b8f4930ddf982e5bfb6fb667a6",
     "extension.css": "532f0c1279568997bbe2662ed4f516f2cf730c0e",
     "extension.js": "88aa704402635846f718e4bb17ee86d469602b73",
@@ -117,7 +117,7 @@
     "gelin/galgame.js": "67b0856e7a292eb923f03a182825b8fc5fea62c1",
     "gelin/gelin.js": "5b7f777522b39174f3e89dfb4769a177cbc04c40",
     "gelin/gouzhu.css": "3d7fd3f13fca60225e914338f482f1d66c7a3241",
-    "info.json": "37daf24fe9818e4cdea677d9d1041d780d749b85",
+    "info.json": "d48345195b4fb189a4f9719c348a5c107159c570",
     "js/arenaReady.js": "7aa27bab43f480c1dc8a0f5a6997a3372ff34d70",
     "js/config.js": "39fc6abc24bd891b8e458ed7da648a651cc69315",
     "js/content.js": "7adde6b1dc1895c5a46b848f32c5bc5fb3ceb15d",

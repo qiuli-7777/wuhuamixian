@@ -1,7 +1,25 @@
+import { content } from "js/content.js";
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
+    /*ql_chuanshu: {
+        enable: "phaseUse",
+        usable: 2,
+        filter(event, player) {
+            return game.hasPlayer(current => !player.getStorage("ql_chuanshu_used").includes(current) && current.isIn());
+        },
+        filterCard: true,
+        filterTarget:(card, player, target) => {
+            return game.filterPlayer(current => !player.getStorage("ql_chuanshu_used").includes(current) && current.isIn()).includes(target);
+        },
+        discard: false,
+        lose: false,
+        async content(event, trigger, player) {
+            const { cards: [card], targets: [target] } = event;
+            await player.give(card, target);
+        },
+    },*/
     //凌勇
     ql_qunqi: {
         trigger: {
@@ -25,6 +43,10 @@ const skills = {
             trigger.num += event.cards.length * 2;
             trigger.player.addTempSkill(event.name + "_effect");
             trigger.player.addMark(event.name + "_effect", event.cards.length, false);
+            player.when({ player: "phaseEnd" })
+            .step(async (event, trigger, player) => {
+                player.clearMark("ql_qunqi_effect");
+            })
         },
         subSkill: {
             effect: {
@@ -34,6 +56,10 @@ const skills = {
                             return num + player.countMark("ql_qunqi_effect");
                         }
                     }
+                },
+                mark: true,
+                intro: {
+                    content: "本回合可额外使用$张【杀】",
                 },
             },
         },
@@ -57,6 +83,9 @@ const skills = {
     },
     //江雾瞳
     ql_erxiang: {
+        intro: {
+            content: "本轮$使用或打出牌时需弃置一张同名牌否则无效",
+        },
         trigger: {
             global: "roundStart",
         },
@@ -76,6 +105,9 @@ const skills = {
                 return target != player && ( targeted ? target != targeted : true );
             })
             .set("prompt", "令一名角色本轮使用或打出牌时需弃置一张同名牌否则无效")
+            .set("ai", (target) => {
+                return -get.attitude(player, target);
+            })
             .forResult();
             const { targets: [target] } = result;
             player.storage.ql_erxiang = target;
@@ -86,7 +118,7 @@ const skills = {
                 charlotte: true,
                 forced: true,
                 trigger: {
-                    player: ["useCard",/* "respond"*/],
+                    player: ["useCard", "respond"],
                 },
                 async content(event, trigger, player) {
                     const cardx = trigger.card;
@@ -95,6 +127,7 @@ const skills = {
                         return card.name == cardx.name;
                     })
                     .set("prompt", `弃置一张与${get.translation(cardx)}相同牌名的牌否则令${get.translation(cardx)}无效`)
+                    .set("ai", (card) => 10-get.useful(card))
                     .forResult();
                     if(!result.bool) {
                         if(trigger.name == "useCard") {
