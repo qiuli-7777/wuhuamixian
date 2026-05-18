@@ -1,25 +1,7 @@
-import { content } from "js/content.js";
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
-    /*ql_chuanshu: {
-        enable: "phaseUse",
-        usable: 2,
-        filter(event, player) {
-            return game.hasPlayer(current => !player.getStorage("ql_chuanshu_used").includes(current) && current.isIn());
-        },
-        filterCard: true,
-        filterTarget:(card, player, target) => {
-            return game.filterPlayer(current => !player.getStorage("ql_chuanshu_used").includes(current) && current.isIn()).includes(target);
-        },
-        discard: false,
-        lose: false,
-        async content(event, trigger, player) {
-            const { cards: [card], targets: [target] } = event;
-            await player.give(card, target);
-        },
-    },*/
     //凌勇
     ql_qunqi: {
         trigger: {
@@ -562,7 +544,9 @@ const skills = {
                     await player.showCards(player.getCards("h"));
                     await player.discardPlayerCard(player, "hej", player.countMark(name), true);
                 }
-                player.addMark(name);
+                if(player.countMark(name) < 2) {
+                    player.addMark(name, false);
+                }
                 player.when({ global: "phaseEnd" })
                     .step(async (event, trigger, player) => {
                         player.clearMark(name);

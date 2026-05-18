@@ -1,9 +1,5 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const translates = {
-    ql_chuanshu: "传书",
-    ql_chuanshu_info: "",
-    ql_dansuan: "胆算",
-    ql_dansuan_info: "",
     ql_lingyong: "凌勇",
     ql_qunqi: "群起",
     ql_qunqi_info: "一名角色摸牌阶段，你可以弃置一张装备牌令其额外摸两张牌且出牌阶段可额外使用一张【杀】（可叠加）。",

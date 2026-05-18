@@ -2,7 +2,8 @@ import characters from "./character.js";
 
 const characterSort = {
     qlconnect: ["ql_matijin", "ql_liujin", "ql_danao", "ql_caifeng", "ql_thua", "chuqi", "yh_ganning", "yh_luxun", "yh_xuyou", "ql_caoang", "ql_caomao", "qlxiahoulingnv", "qlzhuling", "ql_xuchu", "ql_zhanghe", "qlhuangzhong", "qljiangwej", "qlliyan", "ql_lingtong", "qllukang", "qltaishici", "qlzoushi", "qljushou", "qlshenpei", "qlshichangshi", "qlwangjun", "qlzuoci", "ql_xushao", "ql_baishi", "ql_bianzhong", "ql_changxingongdeng", "ql_efeiliusi", "ql_jianmo", "ql_kuisangti", "ql_niaozun", "qlchedanbei", "qldashenkan", "qlligui", "ql_wuxing", "qlyexingtongpai", "qlyucongwang", "ql_sushadanyi", "ql_taozi", "ql_tuma", "ql_xiaoma", "ql_yaya", "ql_zhaoxin", "ql_liuzhang", "qljiangwei"],
-    qlalone: ["qlcaiwenji","qldaqiao","qlxizhicai","qlyanghu","qlxinxianying","ql_xiahoushang","ql_jiangwan","ql_puyuan","qlzhaoxiang","qlsunyi","qlsunquan","ql_sunjian","ql_laola","qlzerong","ql_guoping","hb_hui","ql_ying_jihuoyishou","ql_qingongbo","ql_laoshi","ql_shierhua","ql_wuxianpipa","ql_niuzun","qlgoujian","tr_xihe","qlzhaoyun", "qiuli", "qiulitwo", "qlfuronglu", "qlgoujian2", "qlhuoguomiji", "qlqianli", "qlsilongsifengzuo", "qlweisuojiaju", "qlxuejing", "ql_shuijingbei", "ql_weilusi", "ql_yaheng"],
+    qlalone: ["qlcaiwenji","qldaqiao","qlxizhicai","qlyanghu","qlxinxianying","ql_xiahoushang","ql_jiangwan","ql_puyuan","qlzhaoxiang","qlsunyi","qlsunquan","ql_sunjian","qlzerong","ql_guoping","ql_ying_jihuoyishou","ql_qingongbo","ql_laoshi","ql_shierhua","ql_wuxianpipa","ql_niuzun","qlgoujian","tr_xihe","qlzhaoyun", "qiuli", "qiulitwo", "qlfuronglu", "qlgoujian2", "qlhuoguomiji", "qlqianli", "qlsilongsifengzuo", "qlweisuojiaju", "qlxuejing", "ql_shuijingbei", "ql_weilusi", "ql_yaheng"],
+    qlOtherDesign: ["hb_hui", "ql_laola"],
 	/*qlyoungHero: ["yh_xuyou", "yh_ganning", "yh_luxun"],
 	qleliteWarriorl: ["ql_caomao", "ql_caoang", "ql_sunjian","ql_xiahoushang", "qlxiahoulingnv", "qlshenpei", "qltaishici", "qlzhuling", "qlzuoci", "qlzhaoyun", "qlsunquan", "qlsunyi", "qljiangwei", "qlshichangshi", "qlzerong","qlhuangzhong","qljushou","qlxinxianying","qlliyan","qllukang","qlwangjun","ql_xuchu","ql_zhanghe","ql_puyuan","ql_lingtong","qlzoushi","ql_xushao","ql_jiangwan", "ql_liuzhang"],
 	qlshuraReturns: ["qlzhaoxiang"],
@@ -24,6 +25,7 @@ const characterSortTranslate = {
 	qlwait: "未分包",
 	qlconnect: "联机包",
 	qlalone: "单机包",
+	qlOtherDesign: "别人设计",
 };
 
 export { characterSort, characterSortTranslate };
