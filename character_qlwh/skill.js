@@ -2,6 +2,291 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
+	//莫德凯撒
+	ql_mingchui: {
+		trigger: {
+			source: ["damageBegin1", "damageSource"],
+		},
+		forced: true,
+		filter(event, player) {
+			if (!event.card) {
+				return false;
+			}
+			const evt = event.getParent("useCard");
+			return evt?.targets?.length == 1 && get.is.damageCard(evt.card);
+		},
+		async content(event, trigger, player) {
+			if (event.triggername == "damageBegin1") {
+				trigger.num++;
+			} else {
+				await player.draw(2);
+			}
+		},
+	},
+	ql_buhuai: {
+		mark: true,
+		locked: false,
+	    zhuanhuanji: true,
+	    marktext: "☯",
+	    intro: {
+	        content(storage, player, skill) {
+	            if (storage) {
+	              	return "阴：你可以重铸一张非伤害牌，获得一名其他角色一张牌。";
+	            }
+	            return "阳：你可以重铸一张非伤害牌，获得一点护甲。";
+	        },
+	    },
+		enable: "phaseUse",
+		usable: 1,
+		filter(event, player) {
+			if (!player.countCards("he", card => lib.skill.ql_buhuai.filterCard(card))) {
+				return false;
+			}
+			if (!player.storage.ql_buhuai) {
+				return true;
+			}
+			return game.hasPlayer(target => lib.skill.ql_buhuai.filterTarget(null, player, target));
+		},
+		filterCard: (card, player = get.owner(card), source, strict) => {
+			if (get.is.damageCard(card)) {
+				return false;
+			}
+			if (!player) {
+	            if (player === null) console.trace(`cardRecastable的player参数不应传入null,可以用void 0或undefined占位`);
+	            player = get.owner(card);
+	        }
+	        if (get.name(card) != "sha") return true;
+	        const mod = game.checkMod(card, player, source, "unchanged", "cardRecastable", player);
+	        if (!mod) return false;
+	        if (strict && mod == "unchanged") {
+	            if (get.position(card) != "h") return false;
+	            const info = get.info(card), recastable = info.recastable || info.chongzhu;
+	            return Boolean(typeof recastable == "function" ? recastable(_status.event, player) : recastable);
+	        }
+	        return true;
+		},
+		position: "he",
+		filterTarget(card, player, target) {
+			if (!player.storage.ql_buhuai) {
+				return false;
+			}
+			return target != player && target.countGainableCards(player, "he");
+		},
+		selectTarget() {
+			const player = get.event().player;
+			if (player?.storage?.ql_buhuai) {
+				return 1;
+			}
+			return -1;
+		},
+		lose: false,
+		discard: false,
+		delay: false,
+		prompt() {
+			const player = get.event().player;
+			if (player?.storage.ql_buhuai) {
+              	return "阴：你可以重铸一张非伤害牌，获得一名其他角色一张牌。";
+            }
+            return "阳：你可以重铸一张非伤害牌，获得一点护甲。";
+		},
+		async content(event, trigger, player) {
+			await player.changeZhuanhuanji(event.name);
+			if (event.cards.length) {
+				await player.recast(event.cards);
+			}
+			if (event.targets?.length) {
+				await player.gainPlayerCard(event.targets[0], "he", true);
+			} else {
+				await player.changeHujia(1);
+			}
+		},
+		ai: {
+			order: 7,
+			result: {
+				player(player) {
+					return 1;
+				},
+				target(player, target) {
+					return get.effect(target, { name: "shunshou", position: "he" }, player);
+				},
+			},
+		},
+		group: ["ql_buhuai_change", "ql_buhuai_restore"],
+		subSkill: {
+			change: {
+				trigger: {
+					player: "phaseBegin",
+				},
+				forced: true,
+				locked: false,
+				filter(event, player) {
+					return player.hujia;
+				},
+				async content(event, trigger, player) {
+					const num = player.hujia;
+					const delt = num - player.getDamagedHp();
+					await player.changeHujia(-num);
+					if (delt > 0) {
+						await player.draw(delt);
+					}
+				},
+			},
+			restore: {
+	            trigger: {
+	                source: "damageSource",
+	            },
+	            forced: true,
+	            popup: false,
+	            locked: false,
+	            filter(event, player) {
+	            	return player.getStat().skill.ql_buhuai;
+	            },
+	            content() {
+	                if (player.getStat().skill.ql_buhuai) {
+	                    delete player.getStat().skill.ql_buhuai;
+	                    game.log(player, "重置了", "#g【不坏】");
+	                }
+	            },
+	        },
+		},
+	},
+	ql_tianjixian: {
+		nobracket: true,
+		trigger: {
+			global: "roundStart",
+		},
+		popup: false,
+		limited: true,
+		filter(event, player2) {
+			return game.hasPlayer(target => {
+				if (target == player2) {
+					return false;
+				}
+				return player2.hasAllHistory("useSkill", evt => evt.skill == "ql_buhuai" && evt?.targets?.includes(target));
+			});
+		},
+		async cost(event, trigger, player) {
+			event.result = await player
+				.chooseTarget(get.prompt2(event.skill), (card, player2, target) => {
+					if (target == player2) {
+						return false;
+					}
+					return player2.hasAllHistory("useSkill", evt => evt.skill == "ql_buhuai" && evt?.targets?.includes(target));
+				})
+				.set("ai", target => {
+					const player = get.player();
+					return -get.attitude(player, target);
+				})
+				.forResult();
+		},
+		async content(event, trigger, player) {
+			player.awakenSkill(event.name);
+			const target = event.targets[0];
+			player.logSkill(event.name, target);
+			const num = player.getAllHistory("useSkill", evt => evt.skill == event.name).length;
+			if (num > 5) {
+				const targets = game.filterPlayer(target => target != player);
+				const func = async target => {
+					await target.loseHp();
+					await player.recover();
+					await target.loseMaxHp();
+					await player.gainMaxHp();
+				};
+				await game.doAsyncInOrder(targets, func);
+			}
+			await target.loseHp();
+			await player.recover();
+			await target.loseMaxHp();
+			await player.gainMaxHp();
+			const cards = target.getGainableCards(player, "he");
+			if (cards.length) {
+				await player.gain(target, cards.randomGets(Math.ceil(cards.length / 2)), "give", "bySelf");
+			}
+			if (!target?.isIn()) {
+				return;
+			}
+			player.addSkill(event.name + "_effect");
+			player.markAuto(event.name + "_restore", [target]);
+			const targets2 = game.filterPlayer(current => current != player && current != target);
+			if (!targets2.length) {
+				return;
+			}
+	        for (const target2 of targets2) {
+	            target2.out("ql_tianjixian");
+	            target2._ql_tianjixian = true;
+	        }
+		},
+		subSkill: {
+	        effect: {
+	            trigger: {
+	                global: "roundStart",
+	            },
+	            forced: true,
+	            silent: true,
+	            firstDo: true,
+	            forceDie: true,
+	            charlotte: true,
+	            onremove(player, skill) {
+	            	delete player.storage[skill];
+	            	delete player.storage[skill + "_restore"];
+	            },
+	            async content(event, trigger, player) {
+	                if (!player.storage[event.name]) player.storage[event.name] = true;
+	                else {
+	                    player.removeSkill(event.name);
+	                    const targets = game.filterPlayer2(target => target._ql_tianjixian, [], true);
+		                for (const target of targets) {
+		                    target.in("ql_tianjixian");
+		                    delete target._ql_tianjixian;
+		                }
+	                }
+	            },
+	            group: ["ql_tianjixian_buff", "ql_tianjixian_clear", "ql_tianjixian_restore"],
+	        },
+	        buff: {
+	        	mod: {
+	        		cardUsable: () => Infinity,
+	        	},
+	        	/*trigger: {
+	        		player: "phaseDrawBegin2",
+	        	},
+	        	forced: true,
+	        	charlotte: true,
+	        	filter(event, player) {
+	        		return !event.numFixed;
+	        	},
+	        	async content(event, trigger, player) {
+	        		trigger.num += 2;
+	        	},*/
+	        },
+	        clear: {
+	        	trigger: {
+	                global: "dieAfter",
+	            },
+	            forced: true,
+	            silent: true,
+	            firstDo: true,
+	            forceDie: true,
+	            forceOut: true,
+	            charlotte: true,
+	            filter(event, player) {
+	                return [player, ...player.getStorage("ql_tianjixian_restore")].includes(event.player);
+	            },
+	            async content(event, trigger, player) {
+	            	if (player.getStorage("ql_tianjixian_restore").includes(trigger.player)) {
+	            		player.restoreSkill("ql_tianjixian");
+	            		game.log(player, "重置了", "#g【天际线】");
+	            	}
+	                player.removeSkill("ql_tianjixian_effect");
+	                const targets = game.filterPlayer2(target => target._ql_tianjixian, [], true);
+	                for (const target of targets) {
+	                    target.in("ql_tianjixian");
+	                    delete target._ql_tianjixian;
+	                }
+	            },
+	        },
+		},
+	},
 	//麟趾马蹄金
 	ql_shuoyao: {
 		trigger: {

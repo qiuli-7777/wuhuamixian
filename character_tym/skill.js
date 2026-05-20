@@ -1270,7 +1270,7 @@ const skills = {
                     return !player.hasCard(card => card.hasGaintag("ql_shoudu"), "h");
                 },
                 async content(event, trigger, player) {
-                    game.log(event.triggername);
+                    //game.log(event.triggername);
                     game.log(player.hasCard(card => card.hasGaintag("ql_shoudu"), "h"));
                     const skill = "ql_shoudu";
                     if (player.hasSkill(skill, null, null, false) && !player.hasSkill(skill)) {
@@ -1490,9 +1490,21 @@ const skills = {
     ql_jijie: {
         forced: true,
         trigger: {
-            player: ["damageBegin3", "dieBegin", "loseMaxHpBegin"],
+            player: ["damageBegin3", "dieBegin", "loseMaxHpBegin", "enterGame"],
+            global: "phaseBefore",
+        },
+        filter(event, player) {
+            if(event.name != damage && event.name != die && event.name != loseMaxHp) {
+                return event.name != "phase" || game.phaseNumber == 0;
+            }
+            return true;
         },
         async content(event, trigger, player) {
+            if(trigger.name != damage && trigger.name != die && trigger.name != loseMaxHp) {
+                player.hp = 0;
+                player.update();
+                return;
+            }
             if (trigger.name == "die" || player.hp <= 0) {
                 return;
             }

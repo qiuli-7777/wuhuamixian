@@ -965,7 +965,6 @@ export async function precontent(config, pack) {
     
         selectableTargets.forEach(t => t.classList.add('selectable'));
     
-        // 根据 force 决定显示“确定”还是“确定+取消”
         ui.create.confirm(isForced ? 'o' : 'oc');
         const confirmBtn = ui.confirm;
     
@@ -1003,7 +1002,6 @@ export async function precontent(config, pack) {
             game.resume();
         };
     
-        // “清除选择”按钮
         const clearControl = ui.create.control([
             link => {
                 targetMap.clear();
