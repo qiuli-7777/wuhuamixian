@@ -1,4 +1,12 @@
 const characters = {
+	ql_luxian: {
+		sex: "male",
+		group: "meng",
+		hp: 3,
+		skills: ["ql_shengqiang", "ql_toushe", "ql_xili"],
+		img: "extension/五花米线/skin/ql_luxian.jpg",
+		dieAudios: ["ext:五花米线/audio/die/ql_luxian.mp3"],
+	},
 	ql_tienan: {
 		sex: "male",
 		group: "meng",

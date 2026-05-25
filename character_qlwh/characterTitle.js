@@ -8,5 +8,6 @@ const characterTitles = {
     ql_efeiliusi: "残月之肃",
     ql_kuisangti: "纳祖芒荣耀",
     ql_tienan: "铁铠冥魂",
+    ql_luxian: "圣枪游侠",
 };
 export default characterTitles;

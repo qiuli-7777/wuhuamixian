@@ -904,8 +904,9 @@ export async function precontent(config, pack) {
             if (config.filterOk !== undefined) next.filterOk = config.filterOk;
             if (config.force !== undefined) next.force = config.force;
         }
-    
+
         next.setContent(lib.element.content.ql_chooseMultiTarget);
+		next._args = [...arguments];
         return next;
     };
     
@@ -921,127 +922,134 @@ export async function precontent(config, pack) {
         const okCheck = event.filterOk || (() => true);
         const isForced = event.force || false;
     
-        if (range[0] <= 0) {
-            event.result = { bool: false };
-            game.resume();
-            return;
-        }
-    
-        if (!event.isMine()) {
-            event.result = 'ai';
-            return;
-        }
-    
-        const allTargets = game.players.concat(game.dead);
+		const allTargets = game.players.concat(game.dead);
         const selectableTargets = allTargets.filter(t => filter(null, player, t));
         if (!selectableTargets.length) {
             event.result = { bool: false };
             game.resume();
             return;
         }
-    
-        const targetMap = new Map();
+
+		const targetMap = new Map();
         let currentTotal = 0;
         const min = range[0];
         const max = range[1];
-    
-        const dialog = ui.create.dialog(promptText, 'hidden');
-        dialog.forcebutton = true;
-        dialog.classList.add('noupdate');
-        dialog.open();
-        event.dialog = dialog;
-        event._selectableTargets = selectableTargets;
-        event._targetMap = targetMap;
-        event._currentTotal = 0;
-        event._min = min;
-        event._max = max;
-        event._perMax = perMax;
-        event._okCheck = okCheck;
-        event._isForced = isForced;
-    
-        const hint = ui.create.div('.text.center', '');
-        dialog.content.appendChild(hint);
-        event._hint = hint;
-    
-        selectableTargets.forEach(t => t.classList.add('selectable'));
-    
-        ui.create.confirm(isForced ? 'o' : 'oc');
-        const confirmBtn = ui.confirm;
-    
-        const updateUI = () => {
-            const remain = max - currentTotal;
-            hint.innerHTML = `共需选择 ${min}~${max} 次（每名角色最多 ${perMax} 次）<br>已选 ${currentTotal} 次，还可选 ${remain} 次`;
-            const canConfirm = currentTotal >= min && okCheck(event);
-            if (canConfirm) {
-                confirmBtn.classList.remove('disabled');
-            } else {
-                confirmBtn.classList.add('disabled');
-            }
-        };
-    
-        const cleanup = () => {
-            selectableTargets.forEach(t => t.classList.remove('selectable'));
-            selectableTargets.forEach(t => t.unprompt());
-            if (event.dialog) event.dialog.close();
-            if (event.controls) event.controls.forEach(i => i.close());
-            game.uncheck();
-            game.stopCountChoose();
-        };
-    
-        const finish = (bool) => {
-            if (bool) {
-                const targets = [];
-                targetMap.forEach((count, t) => {
-                    for (let i = 0; i < count; i++) targets.push(t);
-                });
-                event.result = { bool: true, targets, map: new Map(targetMap) };
-            } else {
-                event.result = { bool: false };
-            }
-            cleanup();
+
+        if (range[0] <= 0) {
+            event.result = { bool: false };
             game.resume();
-        };
-    
-        const clearControl = ui.create.control([
-            link => {
-                targetMap.clear();
-                currentTotal = 0;
-                selectableTargets.forEach(t => t.unprompt());
-                updateUI();
-            },
-        ].concat(['清除选择', 'stayleft']));
-        event.controls = [clearControl];
-    
-        updateUI();
-    
-        // 重写目标点击：支持重复选择
-        event.custom = event.custom || { add: {}, replace: {} };
-        event.custom.replace.target = function (target, e) {
-            if (!selectableTargets.includes(target)) return;
-            const cur = targetMap.get(target) || 0;
-            if (cur >= perMax) return;
-            if (currentTotal >= max) return;
-    
-            targetMap.set(target, cur + 1);
-            currentTotal++;
-            target.unprompt();
-            target.prompt("×" + (cur + 1), 'orange');
-            updateUI();
-        };
-    
-        // 覆盖原生确认/取消按钮的行为
-        event.custom.replace.confirm = function(bool) {
-            if (bool) {
-                if (currentTotal < min || !okCheck(event)) return;
-                finish(true);
-            } else {
-                if (!isForced) finish(false);
-            }
-        };
-    
-        game.pause();
-        game.countChoose();
-        event.choosing = true;
+            return;
+        }
+		
+		if (event.isMine()) {
+			const dialog = ui.create.dialog(promptText, 'hidden');
+			dialog.forcebutton = true;
+			dialog.classList.add('noupdate');
+			dialog.open();
+			event.dialog = dialog;
+			event._selectableTargets = selectableTargets;
+			event._targetMap = targetMap;
+			event._currentTotal = 0;
+			event._min = min;
+			event._max = max;
+			event._perMax = perMax;
+			event._okCheck = okCheck;
+			event._isForced = isForced;
+		
+			const hint = ui.create.div('.text.center', '');
+			dialog.content.appendChild(hint);
+			event._hint = hint;
+		
+			selectableTargets.forEach(t => t.classList.add('selectable'));
+		
+			ui.create.confirm(isForced ? 'o' : 'oc');
+			const confirmBtn = ui.confirm;
+		
+			const updateUI = () => {
+				const remain = max - currentTotal;
+				hint.innerHTML = `共需选择 ${min}~${max} 次（每名角色最多 ${perMax} 次）<br>已选 ${currentTotal} 次，还可选 ${remain} 次`;
+				const canConfirm = currentTotal >= min && okCheck(event);
+				if (canConfirm) {
+					confirmBtn.classList.remove('disabled');
+				} else {
+					confirmBtn.classList.add('disabled');
+				}
+			};
+		
+			const cleanup = () => {
+				selectableTargets.forEach(t => t.classList.remove('selectable'));
+				selectableTargets.forEach(t => t.unprompt());
+				if (event.dialog) event.dialog.close();
+				if (event.controls) event.controls.forEach(i => i.close());
+				game.uncheck();
+				game.stopCountChoose();
+			};
+		
+			const finish = (bool) => {
+				if (bool) {
+					const targets = [];
+					targetMap.forEach((count, t) => {
+						for (let i = 0; i < count; i++) targets.push(t);
+					});
+					event.result = { bool: true, targets, map: new Map(targetMap) };
+				} else {
+					event.result = { bool: false };
+				}
+				cleanup();
+				game.resume();
+			};
+		
+			const clearControl = ui.create.control([
+				link => {
+					targetMap.clear();
+					currentTotal = 0;
+					selectableTargets.forEach(t => t.unprompt());
+					updateUI();
+				},
+			].concat(['清除选择', 'stayleft']));
+			event.controls = [clearControl];
+		
+			updateUI();
+		
+			// 重写目标点击：支持重复选择
+			event.custom = event.custom || { add: {}, replace: {} };
+			event.custom.replace.target = function (target, e) {
+				if (!selectableTargets.includes(target)) return;
+				const cur = targetMap.get(target) || 0;
+				if (cur >= perMax) return;
+				if (currentTotal >= max) return;
+		
+				targetMap.set(target, cur + 1);
+				currentTotal++;
+				target.unprompt();
+				target.prompt("×" + (cur + 1), 'orange');
+				updateUI();
+			};
+		
+			// 覆盖原生确认/取消按钮的行为
+			event.custom.replace.confirm = function(bool) {
+				if (bool) {
+					if (currentTotal < min || !okCheck(event)) return;
+					finish(true);
+				} else {
+					if (!isForced) finish(false);
+				}
+			};
+		
+			game.countChoose();
+			event.choosing = true;
+			await game.pause();
+		} else if (event.isOnline()) {
+			event.result = await event.sendAsync();
+		} else {
+			//自己写ai逻辑，找点东西抄
+            event.result = 'ai';
+		}
+		event.resume();
+		event.choosing = false;
+		if (event.dialog) {
+			event.dialog.close();
+		}
     };
 	// 假设你的扩展配置是 lib.config.extension_五花米线
 	// 那么 config 就是那个对象，你可以用 config.enable 判断

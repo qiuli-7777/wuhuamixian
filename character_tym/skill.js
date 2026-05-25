@@ -1,7 +1,146 @@
+//import { content } from "js/content.js";
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
-/** @type { importCharacterConfig['skill'] } */
+/** *@type { importCharacterConfig['skill'] } */
 const skills = {
+    ql_chuanshu: {
+        enable: "phaseUse",
+        usable: 2,
+        onChooseToUse(event) {
+            if(game.online) {
+                return;
+            }
+            const targets = [];
+            event.player.getHistory("useSkill", evt => {
+                if(evt.skill != "ql_chuanshu" || !evt.targets?.length) {
+                    return false;
+                }
+                targets.addArray(evt.targets);
+            });
+            event.set("ql_chuanshu_targets", targets);
+        },
+        filter(event, player) {
+            const { filterCard, filterTarget } = get.info("ql_chuanshu");
+            return game.hasPlayer(current => filterTarget(null, player, current)) && player.countCards("he", card => filterCard(card, player));
+        },
+        position: "he",
+        check(card) {
+            return 9 - get.value(card);
+        },
+        filterTarget(card, player, target) {
+            const { ql_chuanshu_targets } = get.event();
+            return !ql_chuanshu_targets.includes(target);
+        },
+        filterCard(card, player) {
+            return true;
+        },
+        lose: false,
+        discard: false,
+        async content(event, trigger, player) {
+            const { cards, target, name } = event;
+            await player.give(cards, target);
+            target.addGaintag(cards, name);
+        },
+        group: ["ql_chuanshu_show"],
+        subSkill: {
+            show: {
+                trigger: {
+                    global: "phaseZhunbeiBegin",
+                },
+                charlotte: true,
+                forced: true,
+                filter(event, player) {
+                    return event.player.getCards("h", card => card.hasGaintag("ql_chuanshu")).length;
+                },
+                async content(event, trigger, player) {
+                    await trigger.player.showCards(trigger.player.getCards("h", card => card.hasGaintag("ql_chuanshu")));
+                    await game.delay();
+                    const card = get.cards(1);
+                    await trigger.player.showCards(card);
+                    await game.delay();
+                    if(trigger.player.getCards("h", card => card.hasGaintag("ql_chuanshu")).map(card => get.suit(card)).unique().includes(get.suit(card))) {
+                        await game.doAsyncInOrder([player, trigger.player], async current => {
+                            await current.recover();
+                            await current.draw(2);
+                        })
+                        player.addMark("ql_chuanshu", false);
+                    } else {
+                        trigger.player.addTempSkill("ql_chuanshu_debuff");
+                    }
+                    trigger.player.removeGaintag("ql_chuanshu");
+                },
+            },
+            debuff: {
+                intro: {
+                    content: "本回合手牌上限为0",
+                },
+                mod: {
+                    maxHandcard(player, num) {
+                        return num = 0;
+                    },
+                },
+            },
+        },
+    },
+    ql_dansuan: {
+        intro: {
+            content: `本回合已获得#张牌`,
+        },
+        init(player) {
+            player.storage.ql_dansuan = 0;
+            player.addMark("ql_chuanshu", false);
+        },
+        trigger: {
+            player: ["phaseZhunbeiBegin", "phaseJieshuBegin", "damageEnd"],
+            global: "phaseBefore",
+        },
+        frequent(event, player, name) {
+            if(name == "phaseBefore") {
+                return true;
+            }
+            return false;
+        },
+        async content(event, trigger, player) {
+            if(event.triggername == "phaseBefore") {
+                player.storage.ql_dansuan = 0;
+                return;
+            }
+            const next = player.chooseToMove_new("胆算", true)
+            next.set("list", [
+                ["牌堆顶", get.cards(player.countMark("ql_chuanshu") + 2)],
+                ["牌堆底"],
+                ["获得牌"],
+            ]);
+            next.set("filterOk", moved => {
+                return moved[2].length <= player.countMark("ql_chuanshu") - player.storage.ql_dansuan;
+            });
+            next.set("filterMove", (from, to, moved) => {
+                if(typeof to != "number" || to != 2) {
+                    return true;
+                }
+                return moved[2].length < player.countMark("ql_chuanshu") - player.storage.ql_dansuan;
+            });
+            const result = await next.forResult();
+            if(!result?.bool || !result.moved?.length) {
+                return;
+            }
+            const [top, bottom, hand] = result.moved;
+            if(hand?.length) {
+                await player.gain(hand, "gain2");
+                player.storage.ql_dansuan += hand.length;
+            }
+            if(bottom?.length) {
+                for(let i = 0; i < bottom.length; i++) {
+                    ui.cardPile.appendChild(bottom[i]);
+                }
+            }
+            if(top?.length) {
+                for(let i = top.length - 1; i >= 0; i--) {
+                    ui.cardPile.insertBefore(top[i], ui.cardPile.firstChild);
+                }
+            }
+        },
+    },
     //凌勇
     ql_qunqi: {
         trigger: {

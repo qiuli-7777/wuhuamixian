@@ -1,5 +1,10 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const translates = {
+    ql_jinnian: "公孙瑾念",
+    ql_chuanshu: "传书",
+    ql_chuanshu_info: "出牌阶段限两次，每名角色限一次，你可以将一张手牌标记为『传书』牌交给一名角色，该角色准备阶段，展示『传书』牌与牌堆顶的牌，若『传书』牌花色包含牌堆顶的牌的花色，其与你各回复一点体力并摸两张牌，然后你令胆算的X+1。否则其本回合手牌上限为.",
+    ql_dansuan: "胆算",
+    ql_dansuan_info: "准备阶段，结束阶段，和你受到伤害后，你卜算X并获得其中任意张牌（每回合至多以此法获得X-2张牌）。",
     ql_lingyong: "凌勇",
     ql_qunqi: "群起",
     ql_qunqi_info: "一名角色摸牌阶段，你可以弃置一张装备牌令其额外摸两张牌且出牌阶段可额外使用一张【杀】（可叠加）。",

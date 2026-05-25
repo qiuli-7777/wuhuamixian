@@ -1,6 +1,14 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 const dynamicTranslates = {
+	ql_chuanshu(player, skill) {
+		let info = lib.translate[`${skill}_info`];
+		const num = player.countMark("ql_chuanshu");
+		if (num > 0) {
+			info = info.replace("卜算X", `卜算${get.cnNumber(num + 2)}`).replace("X-2张牌", `${get.cnNumber(num)}张牌`);
+		}
+		return info;
+	},
 	ql_fensha(player, skill) {
 		const bool = player.storage[skill];
 		let yang = "你可以从牌堆底摸一张牌，然后视为使用一张【火攻】，此牌结算后，你将一张牌置于牌堆顶",
