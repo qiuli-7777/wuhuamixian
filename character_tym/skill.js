@@ -157,6 +157,10 @@ const skills = {
             .set("position", "he")
             .set("selectCard", [1, Infinity])
             .set("prompt", `弃置任意张装备牌令${get.translation(trigger.player)}额外摸两倍的牌且本回合可以额外使用等量张【杀】`)
+            .set("ai", card => {
+                const { player } = get.event();
+                return get.attitude(player, trigger.player) - get.value(card)/5;
+            })
             .forResult();
         },
         async content(event, trigger, player) {

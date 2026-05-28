@@ -1,7 +1,7 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 const dynamicTranslates = {
-	ql_chuanshu(player, skill) {
+	ql_dansuan(player, skill) {
 		let info = lib.translate[`${skill}_info`];
 		const num = player.countMark("ql_chuanshu");
 		if (num > 0) {
