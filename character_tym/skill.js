@@ -1637,14 +1637,14 @@ const skills = {
             global: "phaseBefore",
         },
         filter(event, player) {
-            if(event.name != damage && event.name != die && event.name != loseMaxHp) {
+            if(event.name != "damage" && event.name != "die" && event.name != "loseMaxHp") {
                 return event.name != "phase" || game.phaseNumber == 0;
             }
             return true;
         },
         async content(event, trigger, player) {
-            if(trigger.name != damage && trigger.name != die && trigger.name != loseMaxHp) {
-                player.hp = 0;
+            if(trigger.name != "damage" && trigger.name != "die" && trigger.name != "loseMaxHp") {
+                player.hp = 1;
                 player.update();
                 return;
             }

@@ -45,7 +45,7 @@ const skills = {
             return true;
         },
         async content(event, trigger, player) {
-            if(trigger.name == "die" || trigger.name == "loseHp") {
+            if((trigger.name == "die" && player.hp > 0) || trigger.name == "loseHp") {
                 trigger.cancel();
                 return;
             }
@@ -64,9 +64,18 @@ const skills = {
 				return;
             }
             if(event.triggername == "damageBegin4") {
-                if(game.getRoundHistory("everything", (evt) => evt.player == player && evt.name == "damage").indexOf(event) == 0) {
-                    player.insertPhase();
-                }
+                let num = 0;
+				const history = game.getAllGlobalHistory();
+				for (let i = history.length - 1; i >= 0; i--) {
+					const evt = history[i]["everything"];
+					for (let j = evt.length - 1; j >= 0; j--) {
+						if (evt[j].name == "damage" && evt[j].player == player) num++;
+					}
+					if (history[i].isRound) break;
+				}
+				if(num == 1) {
+					player.insertPhase();
+				}
                 await player.draw(3, "nodelay");
                 if(trigger?.source?.isIn()) {
                     player.showHandcards();
@@ -82,7 +91,9 @@ const skills = {
             if (!player.isDisabledJudge()) {
 				await player.disableJudge();
 			}
-            player.addMark(event.name, Math.min(3, 6 - player.countMark(event.name)), false);
+			if(player.countMark(event.name) < 6) {
+            	player.addMark(event.name, Math.min(3, 6 - player.countMark(event.name)), true);
+			}
         },
     },
     ql_zhensui: {
@@ -144,7 +155,7 @@ const skills = {
             const { cards, targets, name } = event;
 			for(let i = 0; i < cards.length; i++) {
 				await player.give(cards[i], targets[i]);
-				player.addTempSkill(name + "_cover");
+				player.addTempSkill(name + "_cover", { player: "phaseUseBegin" });
 				player.markAuto(name + "_cover", targets[i]);
 			}
         },
@@ -229,9 +240,13 @@ const skills = {
 								return 8 - get.value(card);
 							},
 							position: "hse",
-							viewAs: { name: links[0][2], nature: links[0][3] },
+							viewAs: { name: links[0][2], nature: links[0][3], storage: { ql_zhensui: true } },
 							async precontent(event, trigger, player) {
-								return;
+								player.when({ player: "useCard" })
+								.filter(evt => evt?.card?.storage?.ql_zhensui)
+								.step(async (event, trigger, player) => {
+									trigger.baseDamage++;
+								})
 							},
 						};
 					},
@@ -253,9 +268,12 @@ const skills = {
 					content: "#被你援护",
 				},
 				trigger: {
-					global: ["damageBegin3", "phaseEnd"],
+					global: ["damageBegin4", "phaseEnd"],
 				},
 				filter(event, player) {
+					if(event.name == "damage" && event.player == player) {
+						return false;
+					}
 					return player.getStorage("ql_zhensui_cover").includes(event.player);
 				},
 				prompt2(event, player) {

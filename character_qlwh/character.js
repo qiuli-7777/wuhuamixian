@@ -11,7 +11,7 @@ const characters = {
 	ql_laotou: {
 		sex: "male",
 		group: "hua",
-		hp: 3,
+		hp: 4,
 		career: "qingrui",
 		skills: ["ql_yinjian", "ql_xiaoyao", "ql_huihao"],
 		img: "extension/五花米线/skin/ql_laotou.jpg",

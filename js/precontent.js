@@ -140,7 +140,7 @@ export async function precontent(config, pack) {
 	//联机自由点将，感谢曼巴佬
 	lib.skill._connect_free_choose = {
 		trigger: {
-			global: 'chooseButtonBegin',
+			player: 'chooseButtonBegin',
 		},
 		filter(event, player) {
 			if (!game.openConnect()) {
@@ -169,13 +169,13 @@ export async function precontent(config, pack) {
 				let wsOnChooseButton
 
 				function create(timeout) {
-					if (_status.gameDrawed) {
+					/*if (_status.gameDrawed) {
         				_status.done = true;
         				return;
     				}
     				if (!regexp.test(event.name) || event.onfree || !event.player == game.me) {
 						return;
-					}
+					}*/
 					let event = get.event();
 					const trigger = event._trigger;
 					const regexp = /^chooseButton(OL)?$/;
