@@ -1,4 +1,22 @@
 const characters = {
+    ql_tianwang: {
+		sex: "male",
+		group: "hua",
+		hp: 5,
+		career: "suwei",
+		skills: ["ql_shenhu", "ql_zhensui"],
+		img: "extension/五花米线/skin/ql_tianwang.jpg",
+		dieAudios: [],
+	},
+	ql_laotou: {
+		sex: "male",
+		group: "hua",
+		hp: 3,
+		career: "qingrui",
+		skills: ["ql_yinjian", "ql_xiaoyao", "ql_huihao"],
+		img: "extension/五花米线/skin/ql_laotou.jpg",
+		dieAudios: [],
+	},
 	ql_luxian: {
 		sex: "male",
 		group: "meng",

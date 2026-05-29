@@ -140,7 +140,7 @@ export async function precontent(config, pack) {
 	//联机自由点将，感谢曼巴佬
 	lib.skill._connect_free_choose = {
 		trigger: {
-			player: 'chooseButtonBegin'
+			global: 'chooseButtonBegin',
 		},
 		filter(event, player) {
 			if (!game.openConnect()) {
@@ -169,6 +169,13 @@ export async function precontent(config, pack) {
 				let wsOnChooseButton
 
 				function create(timeout) {
+					if (_status.gameDrawed) {
+        				_status.done = true;
+        				return;
+    				}
+    				if (!regexp.test(event.name) || event.onfree || !event.player == game.me) {
+						return;
+					}
 					let event = get.event();
 					const trigger = event._trigger;
 					const regexp = /^chooseButton(OL)?$/;
@@ -1071,8 +1078,8 @@ export async function precontent(config, pack) {
 		if (!whmx.card) whmx.card = [];
 		//自定义函数
 		//导入自定义函数，覆盖本体函数
-		if (!whmx.func) whmx.func = [];
-		whmx.func.add("trigger");
+		if (!whmx.function) whmx.function = [];
+		whmx.function.add("trigger");
 		lib.init.css(path, 'extension');
 		//循环导入
 		for (let id in whmx) {
