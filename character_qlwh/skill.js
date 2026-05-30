@@ -21,14 +21,14 @@ const skills = {
             }
             if(event.name == "damage" && name != "damageBegin4") {
                 if (name == "damageCancelled") {
-					return true;
-				}
-				for (var i of event.change_history) {
-					if (i < 0) {
-						return true;
-					}
-				}
-				return false;
+    				return true;
+    			}
+    			for (var i of event.change_history) {
+    				if (i < 0) {
+    					return true;
+    				}
+    			}
+    			return false;
             }
             if(name.includes("Skill")) {
                 if (["global", "equip"].includes(event.type) || event.player == player) {
@@ -36,16 +36,20 @@ const skills = {
 				}
 				let skill = get.sourceSkillFor(event);
 				let info = get.info(skill);
-				if (!skill || !info || info.charlotte || info.equipSkill) {
+				if (!skill || !info || info.equipSkill) {
 					return false;
 				}
 				const skills = game.expandSkills([skill], true);
-				return skills.some(i => lib.skill[i]?.content?.toString()?.includes("skipped = true") || lib.skill[i]?.content?.toString()?.includes(".skip"));
+				return skills.some(i => lib.skill[i]?.content?.toString()?.includes("trigger.cancel") || lib.skill[i]?.content?.toString()?.includes(".skip") || lib.skill[i]?.content?.toString()?.includes("trigger.num =") || lib.skill[i]?.content?.toString()?.includes("all_excluded") || lib.skill[i]?.content?.toString()?.includes(".goto"));
             }
             return true;
         },
         async content(event, trigger, player) {
-            if((trigger.name == "die" && player.hp > 0) || trigger.name == "loseHp") {
+            if((trigger.name == "die" && (player.hp > 0 || player.countMark(event.name))) || trigger.name == "loseHp") {
+                if(player.isDying()) {
+                    player.hp = 5;
+                    player.update();
+                }
                 trigger.cancel();
                 return;
             }
@@ -60,7 +64,7 @@ const skills = {
 						}
 					}
 				})
-				game.log(trigger.player, "的", `#g【${get.translation(skill)}】`, "本回合无法触发了");
+				game.log(trigger.player, "的", `#g【${get.translation(skill)}】`, "被神力碾碎了");
 				return;
             }
             if(event.triggername == "damageBegin4") {
@@ -77,7 +81,7 @@ const skills = {
 					player.insertPhase();
 				}
                 await player.draw(3, "nodelay");
-                if(trigger?.source?.isIn()) {
+                if(trigger?.source?.isIn() && trigger?.source != player) {
                     player.showHandcards();
                     const num = player.getCards("h", card => get.type(card) == "basic").map(card => card.name).unique().length;
                     trigger.source.damage(num);
@@ -87,6 +91,7 @@ const skills = {
                 if(result.number != (get.number(trigger?.card) || 0)) {
                     trigger.cancel();
                 }
+                return;
             }
             if (!player.isDisabledJudge()) {
 				await player.disableJudge();
@@ -100,8 +105,15 @@ const skills = {
         fixed: true,
         superCharlotte: true,
         charlotte: true,
+        firstDo: true,
         group: ["ql_zhensui_basic"],
+        global: "ql_zhensui_target",
         mod: {
+            playerEnabled(card, player, target) {
+                if(card.name == "sha") {
+                    return true;
+                }
+            },
             cardEnabled() {
 				return true;
 			},
@@ -145,6 +157,7 @@ const skills = {
         async content(event, trigger, player) {
             if(event.triggername == "phaseUseBegin") {
                 const num = player.countMark("ql_shenhu");
+                player.clearMark("ql_shenhu");
                 await player.gainMaxHp(num);
                 await player.recover(num);
                 await player.draw(num);
@@ -183,13 +196,22 @@ const skills = {
                     return event.card.name == "sha" && player.storage.ql_zhensui_effect > 0;
                 },
                 async content(event, trigger, player) {
+                    const { targets } = trigger;
                     const num = player.countCards("h", card => get.type(card) == "basic");
-                    trigger.directHit.addArray(trigger.targets);
-                    for(let target of trigger.targets) {
+                    trigger.directHit.addArray(targets);
+                    for(let target of targets) {
                         await target.randomDiscard({ num: 2, discarder: player, position: "he" });
                     }
                     trigger.baseDamage += num;
                     await player.draw(2);
+                    trigger.card.storage.ql_zhensui_1 = true;
+                    player.when({ player: "useCardAfter" })
+                    .filter(evt => evt?.card?.storage?.ql_zhensui_1 && !player.hasHistory("sourceDamage", evt => evt?.card?.storage?.ql_zhensui_1))
+                    .step(async (event, trigger, player) => {
+                        await game.doAsyncInOrder(targets, async current => {
+                            await current.loseHp(trigger.baseDamage);
+                        })
+                    })
                     player.storage.ql_zhensui_effect--;
                 },
             },
@@ -302,6 +324,15 @@ const skills = {
 				},
 			},
         },
+        target:  {
+            firstDo: true,
+            mod: {
+    			targetEnabled(card, player, target) {
+    				return true;
+    			},
+    		},
+    		priority: Infinity,
+		},
         priority: Infinity,
     },
 	//上阳台帖
