@@ -11,6 +11,7 @@ const skills = {
         superCharlotte: true,
         charlotte: true,
         forced: true,
+        audio: "ext:五花米线/audio/skill:2",
         trigger: {
             player: ["enterGame", "dieBegin", "loseHpBefore", "damageBegin4"],
             global: ["phaseBefore", "useSkill", "logSkillBegin", "roundStart", "damageCancelled", "damageZero", "damageAfter"],
@@ -97,7 +98,8 @@ const skills = {
 				await player.disableJudge();
 			}
 			if(player.countMark(event.name) < 6) {
-            	player.addMark(event.name, Math.min(3, 6 - player.countMark(event.name)), true);
+				let num = event.triggername.includes("damage") ? 1 : 3;
+            	player.addMark(event.name, Math.min(num, 6 - player.countMark(event.name)), true);
 			}
         },
     },
@@ -106,6 +108,7 @@ const skills = {
         superCharlotte: true,
         charlotte: true,
         firstDo: true,
+        audio: "ext:五花米线/audio/skill:1",
         group: ["ql_zhensui_basic"],
         global: "ql_zhensui_target",
         mod: {
@@ -156,6 +159,9 @@ const skills = {
         },
         async content(event, trigger, player) {
             if(event.triggername == "phaseUseBegin") {
+				if(player.countMark("ql_shenhu") < 6) {
+					player.addMark("ql_shenhu", Math.min(2, 6 - player.countMark("ql_shenhu")), true);
+				}
                 const num = player.countMark("ql_shenhu");
                 player.clearMark("ql_shenhu");
                 await player.gainMaxHp(num);
@@ -176,6 +182,7 @@ const skills = {
             effect: {
                 charlotte: true,
                 forced: true,
+                audio: "ext:五花米线/audio/skill:2",
                 mod: {
                     targetInRange(card, player) {
                         return true;
@@ -290,7 +297,13 @@ const skills = {
 					content: "#被你援护",
 				},
 				trigger: {
-					global: ["damageBegin4", "phaseEnd"],
+					global: ["damageBegin4", "phaseEnd", "useCard"],
+				},
+				frequent(event, player) {
+					if(event.name == "useCard") {
+						return true;
+					}
+					return false;
 				},
 				filter(event, player) {
 					if(event.name == "damage" && event.player == player) {
@@ -305,9 +318,14 @@ const skills = {
 					return `是否分配牌堆顶的牌`;
 				},
 				async content(event, trigger, player) {
+					if(trigger.name == "useCard" && player.countMark("ql_shenhu") < 6) {
+						player.addMark("ql_shenhu", true);
+						return;
+					}
 					if(trigger.name == "damage") {
-						trigger.cancel();
-						await player.damage(trigger.num, trigger?.source);
+						/*trigger.cancel();
+						await player.damage(trigger.num, trigger?.source);*/
+						trigger.player = player;
 						return;
 					}
 					const result = await player.ql_chooseMultiTarget()
@@ -362,7 +380,7 @@ const skills = {
 			const result = await next.forResult();
 			await player.gain(result.card, "gain2");
 			if (result.bool) {
-				await player.draw();
+				//await player.draw();
 				trigger.result = { bool: true, card: { name: "shan", isCard: true } };
 		        trigger.responded = true;
 		        trigger.animate = false;

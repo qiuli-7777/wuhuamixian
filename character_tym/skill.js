@@ -112,6 +112,7 @@ const skills = {
                 ["获得牌"],
             ]);
             next.set("filterOk", moved => {
+                const player = get.player();
                 return moved[2].length <= player.countMark("ql_chuanshu") - player.storage.ql_dansuan;
             });
             next.set("filterMove", (from, to, moved) => {
