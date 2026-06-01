@@ -3,6 +3,40 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
     //天王石刻
+	_startGame_tianwang: {
+		trigger: {
+			global: "gameStart",
+		},
+		filter(event, player) {
+			return player.name == "ql_tianwang";
+		},
+		charlotte: true,
+		firstDo: true,
+		//silent: true,
+		async cost(event, trigger, player) {
+			game.log(player.style.zIndex);
+			game.broadcastAll(player => {
+				ui.backgroundMusic.pause();
+				game.pause();
+				const dialog = document.createElement("video");
+				dialog.style.backgroundColor = "black";
+				dialog.style.position = "fixed";
+				dialog.style.top = "0";
+				dialog.style.left = "0";
+				dialog.style.width = "100%";
+				dialog.style.height = "100%";
+				dialog.style.zIndex = "1001";
+				dialog.muted = false;
+				dialog.setAttribute("src", `${lib.assetURL}extension/五花米线/video/天王石刻.mp4`);
+				dialog.setAttribute("autoplay", "autoplay");
+				document.body.appendChild(dialog);
+				setTimeout(() => {
+					document.body.removeChild(dialog);
+					game.resume();
+				}, 28000)
+			}, player)
+		},
+	},
     ql_shenhu: {
         intro: {
             content: "#层神力",
@@ -94,6 +128,17 @@ const skills = {
                 }
                 return;
             }
+			game.broadcastAll((bg, bgm) => {
+				if(_status.tempBackground != bg) {
+					_status.tempBackground = bg;
+					game.updateBackground();
+				}
+				if(_status.tempMusic != bgm) {
+					_status.tempMusic = bgm;
+					game.playBackgroundMusic();
+					
+				}
+			}, `ext:五花米线/skin/background/天王石刻.png`, `ext:五花米线/audio/background/天王石刻.mp3`)
             if (!player.isDisabledJudge()) {
 				await player.disableJudge();
 			}
@@ -204,7 +249,262 @@ const skills = {
                 },
                 async content(event, trigger, player) {
                     const { targets } = trigger;
-                    const num = player.countCards("h", card => get.type(card) == "basic");
+					const targetIds = targets.map(t => t.playerid);
+					game.broadcastAll((playerId, targetIdList) => {
+						const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+						if (isMobile && navigator.vibrate) {
+							navigator.vibrate([200, 100, 200, 100, 200]); // 震动三次
+						}
+							// ----- 1. 获取技能使用者的位置 -----
+							let sourcePlayer = null;
+							if (_status.connectMode) {
+								sourcePlayer = lib.playerOL[playerId];
+							} else {
+								sourcePlayer = game.players.find(p => p.playerid === playerId) || game.dead.find(p => p.playerid === playerId);
+							}
+							if (!sourcePlayer) return;
+							const srcRect = sourcePlayer.getBoundingClientRect();
+							const startX = srcRect.left + srcRect.width / 2;
+							const startY = srcRect.top + srcRect.height / 2;
+
+							// ----- 2. 获取所有目标的位置（静态）-----
+							const targetsPos = [];
+							targetIdList.forEach(tid => {
+								let tPlayer = null;
+								if (_status.connectMode) {
+									tPlayer = lib.playerOL[tid];
+								} else {
+									tPlayer = game.players.find(p => p.playerid === tid) || game.dead.find(p => p.playerid === tid);
+								}
+								if (tPlayer) {
+									const rect = tPlayer.getBoundingClientRect();
+									targetsPos.push({
+										id: tid,
+										x: rect.left + rect.width / 2,
+										y: rect.top + rect.height / 2,
+									});
+								}
+							});
+
+							// ----- 3. 智能选择对角方向（飞向远离角色的角落）-----
+							const screenCenterX = window.innerWidth / 2;
+							const screenCenterY = window.innerHeight / 2;
+							let endX, endY;
+							if (startX < screenCenterX && startY < screenCenterY) {
+								endX = window.innerWidth + 200;
+								endY = window.innerHeight + 200;
+							} else if (startX >= screenCenterX && startY < screenCenterY) {
+								endX = -200;
+								endY = window.innerHeight + 200;
+							} else if (startX < screenCenterX && startY >= screenCenterY) {
+								endX = window.innerWidth + 200;
+								endY = -200;
+							} else {
+								endX = -200;
+								endY = -200;
+							}
+
+							// ----- 4. 动画参数 -----
+							const duration = 1200;               // 飞行时间1.2秒
+							const startTime = performance.now();
+							const startLongRadius = 20;
+							const endLongRadius = 500;           // 最终大小翻倍
+							const flatRatio = 0.2;               // 压扁系数
+							const holeOffsetRatio = 0.98;        // 挖孔偏移（越接近1越尖）
+							const holeRadiusRatio = 0.75;        // 挖孔半径（越小月牙越细）
+							const EXPLODE_RADIUS = 200;           // 爆炸判定半径（增大到200px）
+
+							// 爆炸状态
+							let explodedSet = new Set();           // 已触发爆炸的目标id
+
+							// ----- 5. 爆炸特效函数（借鉴 boom_yzs 的粒子效果）-----
+							function createExplosionAt(x, y) {
+								// 创建爆炸容器
+								const explosion = document.createElement('div');
+								explosion.className = 'explosion-effect';
+								Object.assign(explosion.style, {
+									position: 'fixed',
+									left: `${x}px`,
+									top: `${y}px`,
+									width: '0px',
+									height: '0px',
+									zIndex: '1000',
+									pointerEvents: 'none',
+									transform: 'translate(-50%, -50%)'
+								});
+								document.body.appendChild(explosion);
+
+								// 创建粒子（参考 boom_yzs 但增大范围和数量）
+								const colors = ['#ff0000', '#ff8800', '#ffff00', '#ff6600', '#ff3300'];
+								const particleCount = 30;
+
+								for (let i = 0; i < particleCount; i++) {
+									const particle = document.createElement('div');
+									particle.className = 'explosion-particle';
+
+									// 随机大小（10-40px）
+									const size = Math.random() * 30 + 10;
+									const color = colors[Math.floor(Math.random() * colors.length)];
+
+									Object.assign(particle.style, {
+										position: 'absolute',
+										width: `${size}px`,
+										height: `${size}px`,
+										background: color,
+										borderRadius: '50%',
+										left: '0',
+										top: '0',
+										transform: 'translate(-50%, -50%)',
+										opacity: '0',
+										boxShadow: `0 0 ${size * 0.8}px ${color}`,
+										filter: 'blur(2px)'
+									});
+
+									explosion.appendChild(particle);
+
+									// 随机方向、距离、持续时间
+									const angle = Math.random() * Math.PI * 2;
+									const distance = Math.random() * 120 + 50; // 飞散距离增大
+									const duration = Math.random() * 400 + 500; // 持续0.5-0.9秒
+
+									const animation = particle.animate([
+										{
+											opacity: 0,
+											transform: 'translate(-50%, -50%) scale(0)'
+										},
+										{
+											opacity: 1,
+											transform: 'translate(-50%, -50%) scale(1)',
+											offset: 0.2
+										},
+										{
+											opacity: 0.8,
+											transform: `translate(${-50 + Math.cos(angle) * distance}%, ${-50 + Math.sin(angle) * distance}%) scale(0.6)`,
+											offset: 0.6
+										},
+										{
+											opacity: 0,
+											transform: `translate(${-50 + Math.cos(angle) * (distance + 30)}%, ${-50 + Math.sin(angle) * (distance + 30)}%) scale(0)`
+										}
+									], {
+										duration: duration,
+										easing: 'cubic-bezier(0.1, 0.8, 0.3, 1)',
+										fill: 'forwards'
+									});
+
+									animation.onfinish = () => particle.remove();
+								}
+
+								// 添加一个冲击波圆环（类似爆炸光晕）
+								const wave = document.createElement('div');
+								Object.assign(wave.style, {
+									position: 'absolute',
+									left: '0',
+									top: '0',
+									width: '20px',
+									height: '20px',
+									borderRadius: '50%',
+									border: '4px solid #ff8800',
+									transform: 'translate(-50%, -50%) scale(0)',
+									opacity: '1',
+									boxShadow: '0 0 20px rgba(255, 68, 0, 0.8)'
+								});
+								explosion.appendChild(wave);
+								const waveAnim = wave.animate([
+									{ transform: 'translate(-50%, -50%) scale(0)', opacity: 1, borderWidth: '6px' },
+									{ transform: 'translate(-50%, -50%) scale(4)', opacity: 0, borderWidth: '1px' }
+								], { duration: 600, easing: 'ease-out' });
+								waveAnim.onfinish = () => wave.remove();
+
+								// 爆炸容器在动画结束后移除
+								setTimeout(() => {
+									if (explosion.parentNode) explosion.remove();
+								}, 1000);
+							}
+
+							// ----- 6. 创建全屏Canvas（用于绘制月牙）-----
+							const canvas = document.createElement('canvas');
+							const ctx = canvas.getContext('2d');
+							canvas.style.position = 'fixed';
+							canvas.style.top = '0';
+							canvas.style.left = '0';
+							canvas.style.width = '100%';
+							canvas.style.height = '100%';
+							canvas.style.pointerEvents = 'none';
+							canvas.style.zIndex = '9999';
+							document.body.appendChild(canvas);
+
+							const resize = () => {
+								canvas.width = window.innerWidth;
+								canvas.height = window.innerHeight;
+							};
+							resize();
+							window.addEventListener('resize', resize);
+
+							// ----- 7. 动画主循环（只绘制月牙）-----
+							function animate(now) {
+								let elapsed = now - startTime;
+								let progress = Math.min(1, Math.max(0, elapsed / duration));
+								const easeOut = progress * (2 - progress); // 前期变大更快
+
+								// 当前剑气坐标和尺寸
+								const curX = startX + (endX - startX) * easeOut;
+								const curY = startY + (endY - startY) * easeOut;
+								const curLongRadius = startLongRadius + (endLongRadius - startLongRadius) * easeOut;
+								const angle = Math.atan2(endY - startY, endX - startX);
+
+								// ----- 爆炸触发检测 -----
+								for (let tp of targetsPos) {
+									if (!explodedSet.has(tp.id)) {
+										const dist = Math.hypot(curX - tp.x, curY - tp.y);
+										if (dist < EXPLODE_RADIUS) {
+											explodedSet.add(tp.id);
+											createExplosionAt(tp.x, tp.y); // 调用粒子爆炸
+										}
+									}
+								}
+
+								// 绘制月牙剑气
+								ctx.clearRect(0, 0, canvas.width, canvas.height);
+								ctx.save();
+
+								ctx.translate(curX, curY);
+								ctx.rotate(angle);
+								ctx.scale(flatRatio, 1);
+								// 主体（白色半透明）
+								ctx.beginPath();
+								ctx.arc(0, 0, curLongRadius, 0, Math.PI * 2);
+								ctx.fillStyle = `rgba(255, 255, 255, ${0.9 - progress * 0.5})`;
+								ctx.fill();
+								// 挖孔形成月牙
+								ctx.globalCompositeOperation = 'destination-out';
+								ctx.beginPath();
+								const holeOffsetX = -curLongRadius * holeOffsetRatio;
+								const holeOffsetY = 0;
+								ctx.arc(holeOffsetX, holeOffsetY, curLongRadius * holeRadiusRatio, 0, Math.PI * 2);
+								ctx.fill();
+								ctx.globalCompositeOperation = 'source-over';
+								// 外发光
+								ctx.shadowBlur = 20;
+								ctx.shadowColor = 'rgba(200, 220, 255, 0.9)';
+								ctx.beginPath();
+								ctx.arc(0, 0, curLongRadius * 0.6, 0, Math.PI * 2);
+								ctx.fillStyle = `rgba(255, 255, 200, ${0.4 * (1 - progress)})`;
+								ctx.fill();
+								ctx.shadowBlur = 0;
+								ctx.restore();
+
+								if (progress < 1) {
+									requestAnimationFrame(animate);
+								} else {
+									window.removeEventListener('resize', resize);
+									canvas.remove();
+								}
+							}
+
+							requestAnimationFrame(animate);
+						}, player.playerid, targetIds);
+					const num = player.countCards("h", card => get.type(card) == "basic");
                     trigger.directHit.addArray(targets);
                     for(let target of targets) {
                         await target.randomDiscard({ num: 2, discarder: player, position: "he" });
@@ -8931,6 +9231,9 @@ const skills = {
 			global: ["gainMaxHpBefore", "loseMaxHpBefore", "phaseBefore", "damageBegin1"],
 		},
 		filter(event, player) {
+			if (!lib.config["extension_五花米线_ql_guard"]) {
+				return false;
+			}
 			if (event.name == "phase") {
 				return event.skill;
 			}

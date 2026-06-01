@@ -1,4 +1,10 @@
 const characters = {
+    ql_tangtian: {
+        sex: "female",
+        group: "ql_door",
+        hp: 4,
+        skills: ["ql_shenxing", "ql_yijin", "ql_guanci"],
+    },
     ql_jinnian: {
         sex: "female",
         group: "ql_door",
@@ -108,9 +114,9 @@ const characters = {
         sex: "female",
         group: "ql_door",
         hp: 4,
-        skills: ["ql_pingchou", "ql_fensha","ql_yaomei"],
+        skills: ["ql_pingchou", "ql_fensha", "ql_yaomei"],
         isUnseen: true,
-		isAiForbidden: true,
+        isAiForbidden: true,
     },
     ql_suyunsong: {
         sex: "male",
