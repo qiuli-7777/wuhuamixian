@@ -5217,7 +5217,7 @@ const skills = {
 		}
 	},
 	//厄斐琉斯
-	ql_yemu: {
+	ql_yening: {
 		trigger: {
 			global: "phaseJieshuBegin",
 		},
@@ -5228,7 +5228,7 @@ const skills = {
 		},
 		async content(event, trigger, player) {
 			await player.draw();
-			const card = player.getStorage("ql_yemu").find(card => get.itemtype(card) == "card");
+			const card = player.getStorage("ql_yening").find(card => get.itemtype(card) == "card");
 			switch (card.name) {
 				case "ql_tongbi": {
 					const wanjian = get.autoViewAs({ name: "wanjian", isCard: true });
@@ -5294,7 +5294,7 @@ const skills = {
 		},
 		mod: {
 			cardEnabled(card, player) {
-				const equips = player.getStorage("ql_yemu");
+				const equips = player.getStorage("ql_yening");
 				if (!equips.length) {
 					return;
 				}
@@ -5307,25 +5307,25 @@ const skills = {
 				}
 			},
 			cardSavable(card, player) {
-				return lib.skill.ql_yemu.mod.cardEnabled.apply(this, arguments);
+				return lib.skill.ql_yening.mod.cardEnabled.apply(this, arguments);
 			},
 			cardRespondable(card, player) {
-				return lib.skill.ql_yemu.mod.cardEnabled.apply(this, arguments);
+				return lib.skill.ql_yening.mod.cardEnabled.apply(this, arguments);
 			},
 			cardRecastable(card, player) {
-				return lib.skill.ql_yemu.mod.cardEnabled.apply(this, arguments);
+				return lib.skill.ql_yening.mod.cardEnabled.apply(this, arguments);
 			},
 			cardDiscardable(card, player) {
-				return lib.skill.ql_yemu.mod.cardEnabled.apply(this, arguments);
+				return lib.skill.ql_yening.mod.cardEnabled.apply(this, arguments);
 			},
 			cardGiftable(card, player) {
-				return lib.skill.ql_yemu.mod.cardEnabled.apply(this, arguments);
+				return lib.skill.ql_yening.mod.cardEnabled.apply(this, arguments);
 			},
 			canBeReplaced(card, player) {
-				return lib.skill.ql_yemu.mod.cardEnabled.apply(this, arguments);
+				return lib.skill.ql_yening.mod.cardEnabled.apply(this, arguments);
 			},
 			canBeGained(card, source, player) {
-				const equips = player.getStorage("ql_yemu");
+				const equips = player.getStorage("ql_yening");
 				if (!equips.length) {
 					return;
 				}
@@ -5338,11 +5338,11 @@ const skills = {
 				}
 			},
 			canBeDiscarded(card, source, player) {
-				return lib.skill.ql_yemu.mod.canBeGained.apply(this, arguments);
+				return lib.skill.ql_yening.mod.canBeGained.apply(this, arguments);
 			},
 		},
 		derivation: ["ql_mingyong", "ql_duiying", "ql_dishuanganshi"],
-		group: ["ql_yemu_nolose", "ql_yemu_init", "ql_yemu_recast"],
+		group: ["ql_yening_nolose", "ql_yening_init", "ql_yening_recast"],
 		subSkill: {
 			init: {
 				trigger: {
@@ -5370,7 +5370,7 @@ const skills = {
 					const evts = game.getAllGlobalHistory("cardMove", check, event).slice(0).reverse();
 					let num = 0;
 					for (const evt of evts) {
-						if (evt.checkByYemu) {
+						if (evt.checkByyening) {
 							break;
 						}
 						num += evt.cards.length;
@@ -5379,10 +5379,10 @@ const skills = {
 				},
 				async content(event, trigger, player) {
 					if (event.triggername.endsWith("After")) {
-						trigger.set("checkByYemu", true);
+						trigger.set("checkByyening", true);
 					}
 					await player.draw(2);
-					const cards = player.getStorage("ql_yemu");
+					const cards = player.getStorage("ql_yening");
 					const list = [
 						["diamond", 6, "ql_tongbi"],
 						["heart", 13, "ql_duanpo"],
@@ -5414,7 +5414,7 @@ const skills = {
 						player.addEquipTrigger(card.card || card);
 					} else {
 						const card = game.createCard(info[2], ...info.slice(0, 2));
-						player.markAuto("ql_yemu", card);
+						player.markAuto("ql_yening", card);
 						player.$gain2(card);
 						await player.equip(card);
 					}
@@ -5430,12 +5430,12 @@ const skills = {
 					if (event.name == "disableEquip") {
 						return event.slots.includes("equip1");
 					}
-					const cards = player.getStorage("ql_yemu");
+					const cards = player.getStorage("ql_yening");
 					return cards.length && event.cards.containsSome(...cards);
 				},
 				async content(event, trigger, player) {
 					if (trigger.name == "lose") {
-						trigger.cards.removeArray(player.getStorage("ql_yemu"));
+						trigger.cards.removeArray(player.getStorage("ql_yening"));
 					} else {
 						while (trigger.slots.includes("equip1")) {
 							trigger.slots.remove("equip1");
@@ -5449,10 +5449,10 @@ const skills = {
 				locked: true,
 				persevereSkill: true,
 				filter(event, player) {
-					return player.countCards("he", card => get.info("ql_yemu_recast").filterCard(card, player));
+					return player.countCards("he", card => get.info("ql_yening_recast").filterCard(card, player));
 				},
 				filterCard(card, player) {
-					if (player.getStorage("ql_yemu").includes(card)) {
+					if (player.getStorage("ql_yening").includes(card)) {
 						return false;
 					}
 					return get.subtypes(card).includes("equip1") && player.canRecast(card);
@@ -5499,7 +5499,7 @@ const skills = {
 			return event.player?.isIn() && player.canUse(card, event.player, false);
 		},
 		async cost(event, trigger, player) {
-			const cards = player.getStorage("ql_yemu");
+			const cards = player.getStorage("ql_yening");
 			const list = [
 				["diamond", 6, "ql_tongbi"],
 				["heart", 13, "ql_duanpo"],
@@ -5529,28 +5529,28 @@ const skills = {
 				sha = get.autoViewAs({ name: "sha", isCard: true, storage: { ql_mingyong: true } });
 			if (player.canUse(sha, target, false)) {
 				const vcard = { name: info[2], suit: info[0], number: info[1] }
-				player.markAuto("ql_yemu", vcard);
-				const card = player.getStorage("ql_yemu").find(card => get.itemtype(card) == "card");
+				player.markAuto("ql_yening", vcard);
+				const card = player.getStorage("ql_yening").find(card => get.itemtype(card) == "card");
 				if (card) {
 					card.node.name2.innerHTML = `<span style="color:#f5f22d">${get.translation(vcard.suit)}${get.strNumber(vcard.number)} ${get.translation(vcard.name)}</span>`;
 				}
-				const skills = player.getStorage("ql_yemu").filter(card => {
+				const skills = player.getStorage("ql_yening").filter(card => {
 					return get.itemtype(card) != "card";
 				}).map(card => lib.card[card.name].skills[0]);
-				player.addAdditionalSkill("ql_yemu", skills);
+				player.addAdditionalSkill("ql_yening", skills);
 
 				const next = player.useCard(sha, target, false);
 				next.set("markByMingyong", true);
 				await next;
 
-				player.unmarkAuto("ql_yemu", vcard);
+				player.unmarkAuto("ql_yening", vcard);
 				if (card) {
 					card.node.name2.innerHTML = `${get.translation(card.suit)}${get.strNumber(card.number)} ${get.translation(card.name)}`;
 				}
-				const skills2 = player.getStorage("ql_yemu").filter(card => {
+				const skills2 = player.getStorage("ql_yening").filter(card => {
 					return get.itemtype(card) != "card";
 				}).map(card => lib.card[card.name].skills[0]);
-				player.addAdditionalSkill("ql_yemu", skills2);
+				player.addAdditionalSkill("ql_yening", skills2);
 			}
 		},
 		ai: {
@@ -5592,7 +5592,7 @@ const skills = {
 						return;
 					}
 					trigger.set("markByDuiying", true);
-					const cards = player.getStorage("ql_yemu");
+					const cards = player.getStorage("ql_yening");
 					const list = [
 						["diamond", 6, "ql_tongbi"],
 						["heart", 13, "ql_duanpo"],
@@ -5612,29 +5612,29 @@ const skills = {
 					if (result?.bool && result.links?.length) {
 						const info = result.links[0];
 						const vcard = { name: info[2], suit: info[0], number: info[1] };
-						player.markAuto("ql_yemu", vcard);
-						const card = player.getStorage("ql_yemu").find(card => get.itemtype(card) == "card");
+						player.markAuto("ql_yening", vcard);
+						const card = player.getStorage("ql_yening").find(card => get.itemtype(card) == "card");
 						if (card) {
 							card.node.name2.innerHTML = `<span style="color:#f5f22d">${get.translation(vcard.suit)}${get.strNumber(vcard.number)} ${get.translation(vcard.name)}</span>`;
 						}
-						const skills = player.getStorage("ql_yemu").filter(card => {
+						const skills = player.getStorage("ql_yening").filter(card => {
 							return get.itemtype(card) != "card";
 						}).map(card => lib.card[card.name].skills[0]);
-						player.addAdditionalSkill("ql_yemu", skills);
+						player.addAdditionalSkill("ql_yening", skills);
 						player
 							.when({
 								player: "useCardAfter",
 							})
 							.filter(evt => evt == trigger)
 							.step(async (event, trigger, player) => {
-								player.unmarkAuto("ql_yemu", vcard);
+								player.unmarkAuto("ql_yening", vcard);
 								if (card) {
 									card.node.name2.innerHTML = `${get.translation(card.suit)}${get.strNumber(card.number)} ${get.translation(card.name)}`;
 								}
-								const skills2 = player.getStorage("ql_yemu").filter(card => {
+								const skills2 = player.getStorage("ql_yening").filter(card => {
 									return get.itemtype(card) != "card";
 								}).map(card => lib.card[card.name].skills[0]);
-								player.addAdditionalSkill("ql_yemu", skills2);
+								player.addAdditionalSkill("ql_yening", skills2);
 							});
 					}
 				});
@@ -5689,7 +5689,7 @@ const skills = {
 			}
 			const { cost_data: discards, targets: [target] } = event;
 			await target.modedDiscard(discards, player);
-			const cards = player.getStorage("ql_yemu");
+			const cards = player.getStorage("ql_yening");
 			if (cards.every(card => get.itemtype(card) != "card" || card.name != "ql_zhuiming")) {
 				return;
 			}
@@ -5714,29 +5714,29 @@ const skills = {
 			if (result?.bool && result.links?.length) {
 				const info = result.links[0];
 				const vcard = { name: info[2], suit: info[0], number: info[1] };
-				player.markAuto("ql_yemu", vcard);
-				const card = player.getStorage("ql_yemu").find(card => get.itemtype(card) == "card");
+				player.markAuto("ql_yening", vcard);
+				const card = player.getStorage("ql_yening").find(card => get.itemtype(card) == "card");
 				if (card) {
 					card.node.name2.innerHTML = `<span style="color:#f5f22d">${get.translation(vcard.suit)}${get.strNumber(vcard.number)} ${get.translation(vcard.name)}</span>`;
 				}
-				const skills = player.getStorage("ql_yemu").filter(card => {
+				const skills = player.getStorage("ql_yening").filter(card => {
 					return get.itemtype(card) != "card";
 				}).map(card => lib.card[card.name].skills[0]);
-				player.addAdditionalSkill("ql_yemu", skills);
+				player.addAdditionalSkill("ql_yening", skills);
 				player
 					.when({
 						player: "useCardAfter",
 					})
 					.filter(evtx => evt == evtx)
 					.step(async (event, trigger, player) => {
-						player.unmarkAuto("ql_yemu", vcard);
+						player.unmarkAuto("ql_yening", vcard);
 						if (card) {
 							card.node.name2.innerHTML = `${get.translation(card.suit)}${get.strNumber(card.number)} ${get.translation(card.name)}`;
 						}
-						const skills2 = player.getStorage("ql_yemu").filter(card => {
+						const skills2 = player.getStorage("ql_yening").filter(card => {
 							return get.itemtype(card) != "card";
 						}).map(card => lib.card[card.name].skills[0]);
-						player.addAdditionalSkill("ql_yemu", skills2);
+						player.addAdditionalSkill("ql_yening", skills2);
 					});
 			}
 		},
@@ -6500,17 +6500,6 @@ const skills = {
 						replace: { window() { } },
 					})
 					.backup(`${event.name}_backup`)
-					.set("filterCard", (card, player) => {
-						if (get.itemtype(card) !== "card") {
-							return false;
-						}
-						const selected = ui.selected.cards;
-						if (!selected.length) {
-							return true;
-						}
-						const name = get.event().funcName;
-						return get[name](card) != get[name](selected[0]);
-					})
 					.set("funcName", item[1])
 					.set("targetRequired", true)
 					.set("complexTarget", true)
@@ -6522,6 +6511,17 @@ const skills = {
 		subSkill: {
 			backup: {
 				log: false,
+				filterCard(card, player) {
+					if(get.itemtype(card) != "card") {
+						return false;
+					}
+					const { cards } = ui.selected;
+					if(!cards.length) {
+						return true;
+					}
+					const name = get.event().funcName;
+					return get[name](card) != get[name](cards[0]);
+				},
 				viewAs: {
 					name: "sha",
 				},

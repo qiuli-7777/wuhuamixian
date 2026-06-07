@@ -207,7 +207,7 @@ const characters = {
 		sex: "male",
 		group: "meng",
 		hp: 3,
-		skills: ["ql_yemu"],
+		skills: ["ql_yening"],
 		img: "extension/五花米线/skin/ql_efeiliusi.jpg",
 		dieAudios: ["ext:五花米线/audio/die/ql_efeiliusi.mp3"],
 	},

@@ -1,8 +1,363 @@
-//import { content } from "js/content.js";
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** *@type { importCharacterConfig['skill'] } */
 const skills = {
+    ql_bingchuan_gong_skill: {
+        equipSkill: true,
+        forced: true,
+        trigger: {
+            player: "useCard",
+        },
+        filter(event, player) {
+            return game.hasPlayer(current => current.isDamaged());
+        },
+        async content(event, trigger, player) {
+            game.filterPlayer(current => current.isDamaged()).forEach(target => {
+                target.addTempSkill(event.name + "_effect");
+                target.storage.ql_bingchuan_gong_skill_effect.add(trigger.card);
+                target.markSkill(event.name + "_effect");
+            });
+        },
+    },
+    ql_bingchuan_gong_skill_effect: {
+        equipSkill: true,
+        charlotte: true,
+        forced: true,
+        firstDo: true,
+        silent: true,
+        popup: false,
+        init(player, skill) {
+            if(!player.storage[skill]) {
+                player.storage[skill] = [];
+            }
+        },
+        mod: {
+            cardEnabled(card, player) {
+                return false;
+            },
+            cardRespondable(card, player) {
+                return false;
+            },
+            cardSavable(card, player) {
+                return false;
+            },
+        },
+        trigger: {
+            player: ["damage", "damageCancelled", "damageZero"],
+            source: ["damage", "damageCancelled", "damageZero"],
+            target: ["shaMiss", "useCardToExcluded", "useCardToEnd", "eventNeutralized"],
+            global: ["useCardEnd"],
+        },
+        filter(event, player) {
+            const evt = event.getParent("useCard", true, true);
+            if(evt && evt.effectedCount && evt.effectCount) {
+                return false;
+            }
+            return player.storage.ql_bingchuan_gong_skill_effect && event.card && player.storage.ql_bingchuan_gong_skill_effect.includes(event.card) && (event.name != "damage" || event.notLink());
+        },
+        async content(event, trigger, player) {
+            player.storage.ql_bingchuan_gong_skill_effect.remove(trigger.card);
+            if(!player.storage.ql_bingchuan_gong_skill_effect.length) {
+                player.removeSkill(event.name);
+            }
+        },
+        marktext: "舒",
+        intro: {
+            content: "不能使用或打出牌",
+        },
+    },
+    ql_bingchuan_ji_skill: {
+        equipSkill: true,
+        forced: true,
+        firstDo: true,
+        silent: true,
+        popup: false,
+        trigger: {
+            source: "damageSource",
+        },
+        filter(event, player) {
+            return event.player.hp == 1;
+        },
+        async content(event, trigger, player) {
+            await trigger.player.damage("thunder", "nosource");
+        },
+    },
+    ql_bingchuan_mao_skill: {
+        equipSkill: true,
+        forced: true,
+        firstDo: true,
+        silent: true,
+        popup: false,
+        mod: {
+            selectTarget(card, player, range) {
+                if(card.name == "sha" && range[1] != -1) {
+                    range[1]++;
+                }
+            },
+        },
+        trigger: {
+            player: "useCardToPlayered",
+        },
+        filter(event, player) {
+            return event.card.name == "sha";
+        },
+        async content(event, trigger, player) {
+            await trigger.target.randomDiscard({ discarder: player, position: "he" });
+        },
+    },
+    ql_bingchuan_ge_skill: {
+        equipSkill: true,
+        forced: true,
+        firstDo: true,
+        silent: true,
+        popup: false,
+        trigger: {
+            player: "useCardAfter",
+        },
+        filter(event, player) {
+            return event.card.name == "sha" && event.targets.some(target => !target.hasHistory("damage", evt => evt.card == event.card) && target.isIn());
+        },
+        async content(event, trigger, player) {
+            await game.doAsyncInOrder(trigger.targets.filter(target => !target.hasHistory("damage", evt => evt.card == event.card) && target.isIn()), async target => {
+                return target.loseHp();
+            })
+        },
+    },
+    ql_bingchuan_shu_skill: {
+        enable: ["chooseToUse", "chooseToRespond"],
+        prompt: "将一张伤害牌当【闪】， 将一张非伤害牌当【杀】使用或打出。",
+        position: "hes",
+        filter(event, player) {
+            let filter = event.filterCard;
+            let storage = player.getStorage("ql_bingchuan_shu_skill_used");
+            if(filter(get.autoViewAs({ name: "sha" }, "unsure"), player, event) && player.countCards("hes", card => !get.is.damageCard(card, true)) && !storage.includes("sha")) {
+                return true;
+            }
+            if(filter(get.autoViewAs({ name: "shan" }, "unsure"), player, event) && player.countCards("hes", card => get.is.damageCard(card, true)) && !storage.includes("shan")) {
+                return true;
+            }
+            return false;
+        },
+        filterCard(card, player, event) {
+            event = event || _status.event;
+            let filter = event._backup.filterCard;
+            let bool = get.is.damageCard(card, true);
+            if(!bool && filter({ name: "sha", cards: [card] }, player, event)) {
+                return true;
+            }
+            if(bool && filter({ name: "shan", cards: [card] }, player, event)) {
+                return true;
+            }
+            return false;
+        },
+        viewAs(cards, player) {
+            if(cards.length) {
+                let name = false;
+                switch(get.is.damageCard(cards[0], true)) {
+                    case false:
+                        name = "sha";
+                        break;
+                    case true:
+                        name = "shan";
+                        break;
+                }
+                if(name) {
+                    return { name: name };
+                    player.addTempSkill("ql_bingchuan_shu_skill_used");
+                    player.markAuto("ql_bingchuan_shu_skill_used", name);
+                }
+            }
+            return null;
+        },
+    },
+    ql_bingchuan: {
+        getList: ["ql_bingchuan_shu", "ql_bingchuan_ge", "ql_bingchuan_mao", "ql_bingchuan_ji", "ql_bingchuan_gong"],
+        enable: "phaseUse",
+        usable: 1,
+        filter(event, player) {
+            return _status.currentPhase?.isIn() && _status.currentPhase.countCards("he");
+        },
+        async content(event, trigger, player) {
+            const target = _status.currentPhase;
+            if (!target.countCards("he")) {
+                return;
+            }
+            const result = await player
+                .choosePlayerCard(target, "he", 2, "visible", button => {
+                    if (!get.owner(button.link).getDiscardableCards(get.player(), "he").includes(button.link)) {
+                        return false;
+                    }
+                    return true;
+                })
+                .set("filterOk", () => {
+                    const num = ui.selected.buttons.reduce((sum, button) => sum + get.cardNameLength(button.link), 0);
+                    return [2, 3, 5, 6, 9].includes(num);
+                })
+                .forResult();
+            if (result?.bool && result.cards?.length) {
+                await target.discard(result.cards).set("discarder", player)
+                const result2 = await player
+                    .chooseControl("回复1点体力", "出杀次数+1")
+                    .set("prompt", "兵传：请选择一项")
+                    .set("ai", () => {
+                        const player = get.player();
+                        if (player.isPhaseUsing() && player.hasSha()) {
+                            return 1;
+                        }
+                        return 0;
+                    })
+                    .forResult();
+                if (result2.index == 0) {
+                    await player.recover();
+                } else {
+                    player.addSkill("ql_bingchuan_buff");
+                    player.addMark("ql_bingchuan_buff", 1, false);
+                }
+                const num2 = result.cards.reduce((sum, card) => sum + get.cardNameLength(card), 0);
+                if ([2, 3, 5, 6, 9].includes(num2)) {
+                    const name = lib.skill.ql_bingchuan.getList[[2, 3, 5, 6, 9].indexOf(num2)];
+                    if (name) {
+                        const card = game.createCard(name, lib.suit.randomGet(), get.rand(1, 13));
+                        if (card) {
+                            await player.equip(card);
+                        }
+                    }
+                }
+            }
+        },
+        ai: {
+            order() {
+                return get.order({ name: "sha" }) + 0.5;
+            },
+            result: {
+                player(player) {
+                    return 1;
+                },
+            },
+        },
+        group: ["ql_bingchuan_damage", "ql_bingchuan_lose", "ql_bingchuan_destroy"],
+        subSkill: {
+            buff: {
+                charlotte: true,
+                onremove: true,
+                mod: {
+                    cardUsable(card, player, num) {
+                        if (card.name == "sha") {
+                            return num + player.countMark("ql_bingchuan_buff");
+                        }
+                    },
+                },
+            },
+            damage: {
+                trigger: {
+                    player: "damageEnd",
+                },
+                filter(event, player) {
+                    return _status.currentPhase?.isIn() && _status.currentPhase.countCards("he");
+                },
+                logTarget(event, player) {
+                    return _status.currentPhase;
+                },
+                prompt2: "你可以观看并弃置当前回合角色两张牌（牌名字数和需为2，3，5，6，9），然后回复一点体力或令你出杀次数+1，然后装备攻击范围为这两张牌牌名字数和的装备。",
+                async content(event, trigger, player) {
+                    const next = game.createEvent(event.name + "_ql_bingchuan", false);
+                    next.player = player;
+                    next.setContent(lib.skill.ql_bingchuan.content);
+                    await next;
+                },
+            },
+            destroy: {
+                trigger: {
+                    global: ["loseEnd","equipEnd","addJudgeEnd","gainEnd","loseAsyncEnd","addToExpansionEnd"],
+                },
+                forced: true,
+                locked: false,
+                filter(event, player) {
+                  return game.hasPlayer((current) => {
+                    let evt = event.getl(current);
+                    if (evt && evt.es) {
+                      return evt.es.some((i) => i.name.indexOf("ql_bingchuan_") == 0);
+                    }
+                    return false;
+                  });
+                },
+                async content(event, trigger, player) {
+                  const cards2 = game.filterPlayer().map((current) => trigger.getl(current)).filter((evt) => Array.isArray(evt?.es)).flatMap((evt) => evt.es.filter((card) => card.name.indexOf("ql_bingchuan_") == 0));
+                  await game.cardsGotoSpecial(cards2);
+                  game.log(cards2, "被销毁了");
+                },
+            },
+            lose: {
+                trigger: {
+                    player: "loseAfter",
+                    global: ["gainAfter","equipAfter","addJudgeAfter","loseAsyncAfter","addToExpansionAfter"],
+                },
+                forced: true,
+                locked: false,
+                filter(event, player) {
+                    const evt = event.getl(player);
+                    if (!evt) return false;
+                    return evt?.cards2.length;
+                },
+                async content(event, trigger, player) {
+                    let num = player.getAllHistory("lose").length;
+                    let equip = player.getCards("e", card => get.subtype(card) == "equip1").map(card => Math.abs(get.info(card, false)?.distance?.attackFrom) + 1);
+                    equip.forEach(element => {
+                        if(typeof element == "number" && element != 1 && num % element == 0) {
+                            player.draw(element);
+                        }
+                    });
+                    /*await player.recover();
+                    const num = trigger.getl(player).cards2.length;
+                    if (num > 0) {
+                        player.addMark(event.name, num, false);
+                    }
+                    while (player.countMark(event.name) >= player.getAttackRange()) {
+                        player.removeMark(event.name, player.getAttackRange(), false);
+                        await player.draw(player.getAttackRange());
+                    }*/
+                },
+            },
+        },
+    },
+    ql_binghe: {
+        trigger: {
+            player: "phaseUseBegin",
+        },
+        limited: true,
+        async content(event, trigger, player) {
+            player.awakenSkill(event.name);
+            const list = lib.skill.ql_bingchuan.getList;
+            for (const i of list) {
+                await player.expandEquip(1);
+            }
+            const cards = list.map(name => {
+                const card = game.createCard(name, lib.suit.randomGet(), get.rand(1, 13));
+                return card;
+            });
+            player.$gain2(cards);
+            await game.delayx();
+            for (const card of cards) {
+                await player.equip(card);
+            }
+            player.when("phaseEnd")
+                .then(async (event2, trigger2, player2) => {
+                    for (const i of list) {
+                        player.expandedSlots ??= {};
+                        player.expandedSlots["equip1"] ??= 0;
+                        if (player.expandedSlots["equip1"] == 0) {
+                            break;
+                        }
+                        player.expandedSlots["equip1"] -= 1;
+                    }
+                    player.$syncExpand();
+                    const cards2 = player.getCards("e", card => cards.includes(card));
+                    if (cards2.length) {
+                        await player.loseToDiscardpile(cards2);
+                    }
+                });
+        },
+    },
     //唐恬
     ql_shenxing: {
         perserveSkill: true,
@@ -1181,7 +1536,7 @@ const skills = {
         },
         forced: true,
         async content(event, trigger, player) {
-            await player.draw();
+            await player.draw(2);
             const skill = get.sourceSkillFor(trigger);
             const evt = trigger.getParent()._trigger;
             if (evt?.name == "useCard" && trigger.skill == skill) {
