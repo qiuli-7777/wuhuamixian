@@ -2,7 +2,263 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
-    //天王石刻
+	//断臂维纳斯
+	ql_yongtan: {
+		mark: true,
+		zhuanhuanji: true,
+		marktext: "☯",
+		intro: {
+			content(storage, player, skill) {
+				if (!storage) {
+					return "出牌阶段，你可以弃置两张牌令一名角色造成伤害+1目改为雷电伤害至其回合结束";
+				}
+				return "出牌阶段，你可以与一名角色拼点，赢得角色回复一点体力或获得一点护甲，然后你可以获得体力值不小于你的角色区域内各一张牌";
+			},
+		},
+		enable: "phaseUse",
+		filterTarget(card, player, target) {
+			const bool = player.storage.ql_yongtan;
+			return !bool ? true : player.canCompare(target);
+		},
+		selectTarget: 1,
+		filterCard(card, player) {
+			const bool = player.storage.ql_yongtan;
+			return !bool ? lib.filter.cardDiscardable(card, player, "ql_yongtan") : false;
+		},
+		selectCard() {
+			return !get.player().storage.ql_yongtan ? 2 : -1;
+		},
+		check(card) {
+			return 6 - get.value(card);
+		},
+		async content(event, trigger, player) {
+			const bool = player.storage[event.name];
+			player.changeZhuanhuanji(event.name);
+			const { target } = event;
+			if (!bool) {
+				target.addTempSkill(event.name + "_effect", { player: "phaseAfter" });
+			} else {
+				const result = await player.chooseToCompare(target).forResult();
+				const { winner } = result;
+				if (winner?.isIn()) {
+					let result;
+					if (!winner.isDamaged()) {
+						result = { index: 1 };
+					} else {
+						result = await winner
+							.chooseControl({
+								choiceList: [
+									`回复一点体力`,
+									"获得一点护甲",
+								],
+								choice: get.recoverEffect(winner, winner, winner) > 0 ? 0 : 1,
+							})
+							.forResult();
+					}
+					if (result.index == 0) {
+						await winner.recover();
+					} else {
+						await winner.changeHujia(1);
+					}
+				}
+				const targets = game.filterPlayer(target => target.getHp() >= player.getHp());
+				if (targets?.length) {
+					player.line(targets, "yellow");
+					await game.doAsyncInOrder(targets, async target => player.gainPlayerCard({ target, position: "hej" }));
+				}
+			}
+		},
+		ai: {
+			order: 5,
+			reuslt: {
+				target(player, target) {
+					const bool = player.storage.ql_yongtan;
+					if (!bool) {
+						if (target.hasSkill("ql_yongtan_effect")) {
+							return 0;
+						}
+						return 1 + (player == target ? 1 : 0);
+					} else {
+						const num = target.countCards("h");
+						if (num == 1) {
+							return -1;
+						}
+						if (num == 2) {
+							return -0.7;
+						}
+						return -0.5;
+					}
+				},
+			}
+		},
+		subSkill: {
+			effect: {
+				charlotte: true,
+				trigger: {
+					source: "damageBegin1",
+				},
+				forced: true,
+				mark: true,
+				async content(event, trigger, player) {
+					trigger.num++;
+					game.setNature(trigger, "thunder");
+				},
+				marktext: "⚡",
+				intro: {
+					content: "造成的伤害+1且改为雷属性",
+				},
+			},
+		}
+	},
+	ql_daolie: {
+		forced: true,
+		trigger: {
+			player: "logSkillBegin",
+		},
+		filter(event, player) {
+			const skill = get.sourceSkillFor(event);
+			if (skill != "ql_tongxing") {
+				return false;
+			}
+			console.log(event);
+			const index = player.getAllHistory("useSkill", evt => get.sourceSkillFor(evt) == skill).map(evt => evt.event).indexOf(event.log_event);
+			return index >= 0 && (index + 1) % 3 == 0;
+		},
+		async content(event, trigger, player) {
+			player.addSkill(event.name + "_effect");
+		},
+		subSkill: {
+			effect: {
+				mark: true,
+				intro: {
+					content: "你的下一张【杀】伤害*3且不可被响应",
+				},
+				init(player, skill) {
+					player.addTip(skill, "倒列 暴击强命");
+				},
+				onremove(player, skill) {
+					player.removeTip(skill);
+				},
+				trigger: { player: "useCard" },
+				forced: true,
+				filter(event, player) {
+					return event.card.name == "sha";
+				},
+				async content(event, trigger, player) {
+					player.removeSkill(event.name);
+					trigger.baseDamage *= 3;
+					trigger.directHit.addArray(game.players);
+				},
+			}
+		}
+	},
+	ql_tongxing: {
+		forced: true,
+		trigger: {
+			global: "damageEnd",
+			player: "damageBegin4",
+		},
+		filter(event, player) {
+			return event.hasNature("thunder");
+		},
+		async content(event, trigger, player) {
+			if (event.triggername == "damageEnd") {
+				await player.draw(trigger.num);
+			} else {
+				trigger.cancel();
+				await player.draw(trigger.num);
+			}
+		},
+		intro: {
+			content: "mark",
+		},
+		group: ["ql_tongxing_addMark", "ql_tongxing_draw"],
+		subSkill: {
+			addMark: {
+				forced: true,
+				trigger: {
+					global: "phaseBefore",
+					player: ["enterGame", "recoverAfter", "changeHujiaAfter"],
+				},
+				getIndex(event, player) {
+					if (["recover", "changeHujia"].includes(event.name)) {
+						return event.num;
+					}
+					return 1;
+				},
+				async content(event, trigger, player) {
+					player.addMark("ql_tongxing");
+				}
+			},
+			draw: {
+				trigger: {
+					global: ["loseAfter", "equipAfter", "addJudgeAfter", "gainAfter", "loseAsyncAfter", "addToExpansionAfter"],
+				},
+				getIndex(event, player) {
+					const evt = event.relatedEvent || event.getParent();
+					if (["useCard", "respond"].includes(evt?.name)) {
+						return [];
+					}
+					return game.filterPlayer(target => {
+						const evtx = event?.getl(target);
+						return evtx?.cards2?.length;
+					}).sortBySeat();
+				},
+				filter(event, player, name, target) {
+					return target?.isIn() && player.hasMark("ql_tongxing");
+				},
+				logTarget(event, player, name, target) {
+					return target;
+				},
+				check(event, player, name, target) {
+					return get.attitude(player, target) > 0;
+				},
+				prompt2(event, player) {
+					return `移去一枚“同形”令其摸两张牌且使用的下一张牌无次数限制`;
+				},
+				async content(event, trigger, player) {
+					player.removeMark("ql_tongxing");
+					const { targets: [target] } = event;
+					await target.draw(2);
+					target.addSkill("ql_tongxing_nocount");
+				}
+			},
+			nocount: {
+				mod: {
+					cardUsable(card, player) {
+						return Infinity;
+					}
+				},
+				/*mark: true,
+				intro: {
+					content: "使用的下一张牌无次数限制",
+				},*/
+				init(player, skill) {
+					player.addTip(skill, "同形 无次数限制");
+				},
+				onremove(player, skill) {
+					player.removeTip(skill);
+				},
+				charlotte: true,
+				forced: true,
+				popup: false,
+				firstDo: true,
+				trigger: { player: "useCard1" },
+				async content(event, trigger, player) {
+					player.removeSkill(event.name);
+					if (trigger.addCount !== false) {
+						trigger.addCount = false;
+						const stat = player.getStat().card, name = trigger.card.name;
+						if (typeof stat[name] == "number") {
+							stat[name]--;
+						}
+						game.log(trigger.card, "不计入次数");
+					}
+				}
+			},
+		},
+	},
+	//天王石刻
 	_startGame_tianwang: {
 		trigger: {
 			global: "gameStart",
@@ -37,36 +293,36 @@ const skills = {
 			}, player)
 		},
 	},
-    ql_shenhu: {
-        intro: {
-            content: "#层神力",
-        },
-        fixed: true,
-        superCharlotte: true,
-        charlotte: true,
-        forced: true,
-        audio: "ext:五花米线/audio/skill:2",
-        trigger: {
-            player: ["enterGame", "dieBegin", "loseHpBefore", "damageBegin4"],
-            global: ["phaseBefore", "useSkill", "logSkillBegin", "roundStart", "damageCancelled", "damageZero", "damageAfter"],
-        },
-        filter(event, player, name) {
-            if(name == "enterGame" || name == "phaseBefore") {
-                return event.name != "phase" || game.phaseNumber == 0;
-            }
-            if(event.name == "damage" && name != "damageBegin4") {
-                if (name == "damageCancelled") {
-    				return true;
-    			}
-    			for (var i of event.change_history) {
-    				if (i < 0) {
-    					return true;
-    				}
-    			}
-    			return false;
-            }
-            if(name.includes("Skill")) {
-                if (["global", "equip"].includes(event.type) || event.player == player) {
+	ql_shenhu: {
+		intro: {
+			content: "#层神力",
+		},
+		fixed: true,
+		superCharlotte: true,
+		charlotte: true,
+		forced: true,
+		audio: "ext:五花米线/audio/skill:2",
+		trigger: {
+			player: ["enterGame", "dieBegin", "loseHpBefore", "damageBegin4"],
+			global: ["phaseBefore", "useSkill", "logSkillBegin", "roundStart", "damageCancelled", "damageZero", "damageAfter"],
+		},
+		filter(event, player, name) {
+			if (name == "enterGame" || name == "phaseBefore") {
+				return event.name != "phase" || game.phaseNumber == 0;
+			}
+			if (event.name == "damage" && name != "damageBegin4") {
+				if (name == "damageCancelled") {
+					return true;
+				}
+				for (var i of event.change_history) {
+					if (i < 0) {
+						return true;
+					}
+				}
+				return false;
+			}
+			if (name.includes("Skill")) {
+				if (["global", "equip"].includes(event.type) || event.player == player) {
 					return false;
 				}
 				let skill = get.sourceSkillFor(event);
@@ -76,20 +332,20 @@ const skills = {
 				}
 				const skills = game.expandSkills([skill], true);
 				return skills.some(i => lib.skill[i]?.content?.toString()?.includes("trigger.cancel") || lib.skill[i]?.content?.toString()?.includes(".skip") || lib.skill[i]?.content?.toString()?.includes("trigger.num =") || lib.skill[i]?.content?.toString()?.includes("all_excluded") || lib.skill[i]?.content?.toString()?.includes(".goto"));
-            }
-            return true;
-        },
-        async content(event, trigger, player) {
-            if((trigger.name == "die" && (player.hp > 0 || player.countMark(event.name))) || trigger.name == "loseHp") {
-                if(player.isDying()) {
-                    player.hp = 5;
-                    player.update();
-                }
-                trigger.cancel();
-                return;
-            }
-            if(event.triggername.includes("Skill")) {
-                let skill = get.sourceSkillFor(trigger);
+			}
+			return true;
+		},
+		async content(event, trigger, player) {
+			if ((trigger.name == "die" && (player.hp > 0 || player.countMark(event.name))) || trigger.name == "loseHp") {
+				if (player.isDying()) {
+					player.hp = 5;
+					player.update();
+				}
+				trigger.cancel();
+				return;
+			}
+			if (event.triggername.includes("Skill")) {
+				let skill = get.sourceSkillFor(trigger);
 				const skills = game.expandSkills([skill], true);
 				skills.forEach(skill => {
 					for (const i in lib.hook) {
@@ -101,9 +357,9 @@ const skills = {
 				})
 				game.log(trigger.player, "的", `#g【${get.translation(skill)}】`, "被神力碾碎了");
 				return;
-            }
-            if(event.triggername == "damageBegin4") {
-                let num = 0;
+			}
+			if (event.triggername == "damageBegin4") {
+				let num = 0;
 				const history = game.getAllGlobalHistory();
 				for (let i = history.length - 1; i >= 0; i--) {
 					const evt = history[i]["everything"];
@@ -112,83 +368,83 @@ const skills = {
 					}
 					if (history[i].isRound) break;
 				}
-				if(num == 1) {
+				if (num == 1) {
 					player.insertPhase();
 				}
-                await player.draw(3, "nodelay");
-                if(trigger?.source?.isIn() && trigger?.source != player) {
-                    player.showHandcards();
-                    const num = player.getCards("h", card => get.type(card) == "basic").map(card => card.name).unique().length;
-                    trigger.source.damage(num);
-                }
-                const result = await player.judge().forResult();
-                await player.gain(result.card, "gain2");
-                if(result.number != (get.number(trigger?.card) || 0)) {
-                    trigger.cancel();
-                }
-                return;
-            }
+				await player.draw(3, "nodelay");
+				if (trigger?.source?.isIn() && trigger?.source != player) {
+					player.showHandcards();
+					const num = player.getCards("h", card => get.type(card) == "basic").map(card => card.name).unique().length;
+					trigger.source.damage(num);
+				}
+				const result = await player.judge().forResult();
+				await player.gain(result.card, "gain2");
+				if (result.number != (get.number(trigger?.card) || 0)) {
+					trigger.cancel();
+				}
+				return;
+			}
 			game.broadcastAll((bg, bgm) => {
-				if(_status.tempBackground != bg) {
+				if (_status.tempBackground != bg) {
 					_status.tempBackground = bg;
 					game.updateBackground();
 				}
-				if(_status.tempMusic != bgm) {
+				if (_status.tempMusic != bgm) {
 					_status.tempMusic = bgm;
 					game.playBackgroundMusic();
-					
+
 				}
 			}, `ext:五花米线/skin/background/天王石刻.png`, `ext:五花米线/audio/background/天王石刻.mp3`)
-            if (!player.isDisabledJudge()) {
+			if (!player.isDisabledJudge()) {
 				await player.disableJudge();
 			}
-			if(player.countMark(event.name) < 6) {
+			if (player.countMark(event.name) < 6) {
 				let num = event.triggername.includes("damage") ? 1 : 3;
-            	player.addMark(event.name, Math.min(num, 6 - player.countMark(event.name)), true);
+				player.addMark(event.name, Math.min(num, 6 - player.countMark(event.name)), true);
 			}
-        },
-    },
-    ql_zhensui: {
-        fixed: true,
-        superCharlotte: true,
-        charlotte: true,
-        firstDo: true,
-        audio: "ext:五花米线/audio/skill:1",
-        group: ["ql_zhensui_basic"],
-        global: "ql_zhensui_target",
-        mod: {
-            playerEnabled(card, player, target) {
-                if(card.name == "sha") {
-                    return true;
-                }
-            },
-            cardEnabled() {
+		},
+	},
+	ql_zhensui: {
+		fixed: true,
+		superCharlotte: true,
+		charlotte: true,
+		firstDo: true,
+		audio: "ext:五花米线/audio/skill:1",
+		group: ["ql_zhensui_basic"],
+		global: "ql_zhensui_target",
+		mod: {
+			playerEnabled(card, player, target) {
+				if (card.name == "sha") {
+					return true;
+				}
+			},
+			cardEnabled() {
 				return true;
 			},
 			cardRespondable() {
 				return true;
 			},
 			cardSavable(card) {
-			    if(card.name == "tao") {
-				    return true;
+				if (card.name == "tao") {
+					return true;
 				}
 			},
-	    },
-        trigger: {
-            player: ["phaseUseBegin", "phaseUseEnd"],
-        },
-        filter(event, player, name) {
-            if(name == "phaseUseBegin") {
-                return player.countMark("ql_shenhu") > 0;
-            }
-            return true;
-        },
-        async cost(event, trigger, player) {
-            if(event.triggername == "phaseUseBegin") {
-                event.result = await player.chooseBool(`移去全部神力`).forResult();
-                return;
-            }
-            event.result = await player.chooseCardTarget()
+		},
+		trigger: {
+			player: ["phaseUseBegin", "phaseUseEnd"],
+		},
+		filter(event, player, name) {
+			if (name == "phaseUseBegin") {
+				return player.countMark("ql_shenhu") > 0;
+			}
+			return true;
+		},
+		async cost(event, trigger, player) {
+			if (event.triggername == "phaseUseBegin") {
+				event.result = await player.chooseBool(`移去全部神力`).forResult();
+				return;
+			}
+			event.result = await player.chooseCardTarget()
 				.set("filterCard", (card) => true)
 				.set("selectCard", [1, Infinity])
 				.set("filterTarget", (card, player, target) => true)
@@ -196,341 +452,341 @@ const skills = {
 				.set("filterOk", () => {
 					return ui.selected.cards.length == ui.selected.targets.length;
 				})
-                .set("position", "he")
+				.set("position", "he")
 				.set("targetprompt", () => {
-					return ["获得", get.translation(ui.selected.cards[ui.selected.targets.length -1])].join("<br>");
+					return ["获得", get.translation(ui.selected.cards[ui.selected.targets.length - 1])].join("<br>");
 				})
-                .forResult();
-        },
-        async content(event, trigger, player) {
-            if(event.triggername == "phaseUseBegin") {
-				if(player.countMark("ql_shenhu") < 6) {
+				.forResult();
+		},
+		async content(event, trigger, player) {
+			if (event.triggername == "phaseUseBegin") {
+				if (player.countMark("ql_shenhu") < 6) {
 					player.addMark("ql_shenhu", Math.min(2, 6 - player.countMark("ql_shenhu")), true);
 				}
-                const num = player.countMark("ql_shenhu");
-                player.clearMark("ql_shenhu");
-                await player.gainMaxHp(num);
-                await player.recover(num);
-                await player.draw(num);
-                player.storage.ql_zhensui_effect = num;
-                player.addTempSkill(event.name + "_effect");
-                return;
-            }
-            const { cards, targets, name } = event;
-			for(let i = 0; i < cards.length; i++) {
+				const num = player.countMark("ql_shenhu");
+				player.clearMark("ql_shenhu");
+				await player.gainMaxHp(num);
+				await player.recover(num);
+				await player.draw(num);
+				player.storage.ql_zhensui_effect = num;
+				player.addTempSkill(event.name + "_effect");
+				return;
+			}
+			const { cards, targets, name } = event;
+			for (let i = 0; i < cards.length; i++) {
 				await player.give(cards[i], targets[i]);
 				player.addTempSkill(name + "_cover", { player: "phaseUseBegin" });
 				player.markAuto(name + "_cover", targets[i]);
 			}
-        },
-        subSkill: {
-            effect: {
-                charlotte: true,
-                forced: true,
-                audio: "ext:五花米线/audio/skill:2",
-                mod: {
-                    targetInRange(card, player) {
-                        return true;
-                    },
-                    cardUsable(card, player) {
-                        return true;
-                    },
-                    selectTarget(card, player, range) {
-                        if(card.name == "sha" && range[1] != -1) {
-                            range[1] = Infinity;
-                        }
-                    },
-                },
-                trigger: {
-                    player: "useCard",
-                },
-                filter(event, player) {
-                    return event.card.name == "sha" && player.storage.ql_zhensui_effect > 0;
-                },
-                async content(event, trigger, player) {
-                    const { targets } = trigger;
+		},
+		subSkill: {
+			effect: {
+				charlotte: true,
+				forced: true,
+				audio: "ext:五花米线/audio/skill:2",
+				mod: {
+					targetInRange(card, player) {
+						return true;
+					},
+					cardUsable(card, player) {
+						return true;
+					},
+					selectTarget(card, player, range) {
+						if (card.name == "sha" && range[1] != -1) {
+							range[1] = Infinity;
+						}
+					},
+				},
+				trigger: {
+					player: "useCard",
+				},
+				filter(event, player) {
+					return event.card.name == "sha" && player.storage.ql_zhensui_effect > 0;
+				},
+				async content(event, trigger, player) {
+					const { targets } = trigger;
 					const targetIds = targets.map(t => t.playerid);
 					game.broadcastAll((playerId, targetIdList) => {
 						const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 						if (isMobile && navigator.vibrate) {
 							navigator.vibrate([200, 100, 200, 100, 200]); // 震动三次
 						}
-							// ----- 1. 获取技能使用者的位置 -----
-							let sourcePlayer = null;
+						// ----- 1. 获取技能使用者的位置 -----
+						let sourcePlayer = null;
+						if (_status.connectMode) {
+							sourcePlayer = lib.playerOL[playerId];
+						} else {
+							sourcePlayer = game.players.find(p => p.playerid === playerId) || game.dead.find(p => p.playerid === playerId);
+						}
+						if (!sourcePlayer) return;
+						const srcRect = sourcePlayer.getBoundingClientRect();
+						const startX = srcRect.left + srcRect.width / 2;
+						const startY = srcRect.top + srcRect.height / 2;
+
+						// ----- 2. 获取所有目标的位置（静态）-----
+						const targetsPos = [];
+						targetIdList.forEach(tid => {
+							let tPlayer = null;
 							if (_status.connectMode) {
-								sourcePlayer = lib.playerOL[playerId];
+								tPlayer = lib.playerOL[tid];
 							} else {
-								sourcePlayer = game.players.find(p => p.playerid === playerId) || game.dead.find(p => p.playerid === playerId);
+								tPlayer = game.players.find(p => p.playerid === tid) || game.dead.find(p => p.playerid === tid);
 							}
-							if (!sourcePlayer) return;
-							const srcRect = sourcePlayer.getBoundingClientRect();
-							const startX = srcRect.left + srcRect.width / 2;
-							const startY = srcRect.top + srcRect.height / 2;
-
-							// ----- 2. 获取所有目标的位置（静态）-----
-							const targetsPos = [];
-							targetIdList.forEach(tid => {
-								let tPlayer = null;
-								if (_status.connectMode) {
-									tPlayer = lib.playerOL[tid];
-								} else {
-									tPlayer = game.players.find(p => p.playerid === tid) || game.dead.find(p => p.playerid === tid);
-								}
-								if (tPlayer) {
-									const rect = tPlayer.getBoundingClientRect();
-									targetsPos.push({
-										id: tid,
-										x: rect.left + rect.width / 2,
-										y: rect.top + rect.height / 2,
-									});
-								}
-							});
-
-							// ----- 3. 智能选择对角方向（飞向远离角色的角落）-----
-							const screenCenterX = window.innerWidth / 2;
-							const screenCenterY = window.innerHeight / 2;
-							let endX, endY;
-							if (startX < screenCenterX && startY < screenCenterY) {
-								endX = window.innerWidth + 200;
-								endY = window.innerHeight + 200;
-							} else if (startX >= screenCenterX && startY < screenCenterY) {
-								endX = -200;
-								endY = window.innerHeight + 200;
-							} else if (startX < screenCenterX && startY >= screenCenterY) {
-								endX = window.innerWidth + 200;
-								endY = -200;
-							} else {
-								endX = -200;
-								endY = -200;
-							}
-
-							// ----- 4. 动画参数 -----
-							const duration = 1200;               // 飞行时间1.2秒
-							const startTime = performance.now();
-							const startLongRadius = 20;
-							const endLongRadius = 500;           // 最终大小翻倍
-							const flatRatio = 0.2;               // 压扁系数
-							const holeOffsetRatio = 0.98;        // 挖孔偏移（越接近1越尖）
-							const holeRadiusRatio = 0.75;        // 挖孔半径（越小月牙越细）
-							const EXPLODE_RADIUS = 200;           // 爆炸判定半径（增大到200px）
-
-							// 爆炸状态
-							let explodedSet = new Set();           // 已触发爆炸的目标id
-
-							// ----- 5. 爆炸特效函数（借鉴 boom_yzs 的粒子效果）-----
-							function createExplosionAt(x, y) {
-								// 创建爆炸容器
-								const explosion = document.createElement('div');
-								explosion.className = 'explosion-effect';
-								Object.assign(explosion.style, {
-									position: 'fixed',
-									left: `${x}px`,
-									top: `${y}px`,
-									width: '0px',
-									height: '0px',
-									zIndex: '1000',
-									pointerEvents: 'none',
-									transform: 'translate(-50%, -50%)'
+							if (tPlayer) {
+								const rect = tPlayer.getBoundingClientRect();
+								targetsPos.push({
+									id: tid,
+									x: rect.left + rect.width / 2,
+									y: rect.top + rect.height / 2,
 								});
-								document.body.appendChild(explosion);
+							}
+						});
 
-								// 创建粒子（参考 boom_yzs 但增大范围和数量）
-								const colors = ['#ff0000', '#ff8800', '#ffff00', '#ff6600', '#ff3300'];
-								const particleCount = 30;
+						// ----- 3. 智能选择对角方向（飞向远离角色的角落）-----
+						const screenCenterX = window.innerWidth / 2;
+						const screenCenterY = window.innerHeight / 2;
+						let endX, endY;
+						if (startX < screenCenterX && startY < screenCenterY) {
+							endX = window.innerWidth + 200;
+							endY = window.innerHeight + 200;
+						} else if (startX >= screenCenterX && startY < screenCenterY) {
+							endX = -200;
+							endY = window.innerHeight + 200;
+						} else if (startX < screenCenterX && startY >= screenCenterY) {
+							endX = window.innerWidth + 200;
+							endY = -200;
+						} else {
+							endX = -200;
+							endY = -200;
+						}
 
-								for (let i = 0; i < particleCount; i++) {
-									const particle = document.createElement('div');
-									particle.className = 'explosion-particle';
+						// ----- 4. 动画参数 -----
+						const duration = 1200;               // 飞行时间1.2秒
+						const startTime = performance.now();
+						const startLongRadius = 20;
+						const endLongRadius = 500;           // 最终大小翻倍
+						const flatRatio = 0.2;               // 压扁系数
+						const holeOffsetRatio = 0.98;        // 挖孔偏移（越接近1越尖）
+						const holeRadiusRatio = 0.75;        // 挖孔半径（越小月牙越细）
+						const EXPLODE_RADIUS = 200;           // 爆炸判定半径（增大到200px）
 
-									// 随机大小（10-40px）
-									const size = Math.random() * 30 + 10;
-									const color = colors[Math.floor(Math.random() * colors.length)];
+						// 爆炸状态
+						let explodedSet = new Set();           // 已触发爆炸的目标id
 
-									Object.assign(particle.style, {
-										position: 'absolute',
-										width: `${size}px`,
-										height: `${size}px`,
-										background: color,
-										borderRadius: '50%',
-										left: '0',
-										top: '0',
-										transform: 'translate(-50%, -50%)',
-										opacity: '0',
-										boxShadow: `0 0 ${size * 0.8}px ${color}`,
-										filter: 'blur(2px)'
-									});
+						// ----- 5. 爆炸特效函数（借鉴 boom_yzs 的粒子效果）-----
+						function createExplosionAt(x, y) {
+							// 创建爆炸容器
+							const explosion = document.createElement('div');
+							explosion.className = 'explosion-effect';
+							Object.assign(explosion.style, {
+								position: 'fixed',
+								left: `${x}px`,
+								top: `${y}px`,
+								width: '0px',
+								height: '0px',
+								zIndex: '1000',
+								pointerEvents: 'none',
+								transform: 'translate(-50%, -50%)'
+							});
+							document.body.appendChild(explosion);
 
-									explosion.appendChild(particle);
+							// 创建粒子（参考 boom_yzs 但增大范围和数量）
+							const colors = ['#ff0000', '#ff8800', '#ffff00', '#ff6600', '#ff3300'];
+							const particleCount = 30;
 
-									// 随机方向、距离、持续时间
-									const angle = Math.random() * Math.PI * 2;
-									const distance = Math.random() * 120 + 50; // 飞散距离增大
-									const duration = Math.random() * 400 + 500; // 持续0.5-0.9秒
+							for (let i = 0; i < particleCount; i++) {
+								const particle = document.createElement('div');
+								particle.className = 'explosion-particle';
 
-									const animation = particle.animate([
-										{
-											opacity: 0,
-											transform: 'translate(-50%, -50%) scale(0)'
-										},
-										{
-											opacity: 1,
-											transform: 'translate(-50%, -50%) scale(1)',
-											offset: 0.2
-										},
-										{
-											opacity: 0.8,
-											transform: `translate(${-50 + Math.cos(angle) * distance}%, ${-50 + Math.sin(angle) * distance}%) scale(0.6)`,
-											offset: 0.6
-										},
-										{
-											opacity: 0,
-											transform: `translate(${-50 + Math.cos(angle) * (distance + 30)}%, ${-50 + Math.sin(angle) * (distance + 30)}%) scale(0)`
-										}
-									], {
-										duration: duration,
-										easing: 'cubic-bezier(0.1, 0.8, 0.3, 1)',
-										fill: 'forwards'
-									});
+								// 随机大小（10-40px）
+								const size = Math.random() * 30 + 10;
+								const color = colors[Math.floor(Math.random() * colors.length)];
 
-									animation.onfinish = () => particle.remove();
-								}
-
-								// 添加一个冲击波圆环（类似爆炸光晕）
-								const wave = document.createElement('div');
-								Object.assign(wave.style, {
+								Object.assign(particle.style, {
 									position: 'absolute',
+									width: `${size}px`,
+									height: `${size}px`,
+									background: color,
+									borderRadius: '50%',
 									left: '0',
 									top: '0',
-									width: '20px',
-									height: '20px',
-									borderRadius: '50%',
-									border: '4px solid #ff8800',
-									transform: 'translate(-50%, -50%) scale(0)',
-									opacity: '1',
-									boxShadow: '0 0 20px rgba(255, 68, 0, 0.8)'
+									transform: 'translate(-50%, -50%)',
+									opacity: '0',
+									boxShadow: `0 0 ${size * 0.8}px ${color}`,
+									filter: 'blur(2px)'
 								});
-								explosion.appendChild(wave);
-								const waveAnim = wave.animate([
-									{ transform: 'translate(-50%, -50%) scale(0)', opacity: 1, borderWidth: '6px' },
-									{ transform: 'translate(-50%, -50%) scale(4)', opacity: 0, borderWidth: '1px' }
-								], { duration: 600, easing: 'ease-out' });
-								waveAnim.onfinish = () => wave.remove();
 
-								// 爆炸容器在动画结束后移除
-								setTimeout(() => {
-									if (explosion.parentNode) explosion.remove();
-								}, 1000);
+								explosion.appendChild(particle);
+
+								// 随机方向、距离、持续时间
+								const angle = Math.random() * Math.PI * 2;
+								const distance = Math.random() * 120 + 50; // 飞散距离增大
+								const duration = Math.random() * 400 + 500; // 持续0.5-0.9秒
+
+								const animation = particle.animate([
+									{
+										opacity: 0,
+										transform: 'translate(-50%, -50%) scale(0)'
+									},
+									{
+										opacity: 1,
+										transform: 'translate(-50%, -50%) scale(1)',
+										offset: 0.2
+									},
+									{
+										opacity: 0.8,
+										transform: `translate(${-50 + Math.cos(angle) * distance}%, ${-50 + Math.sin(angle) * distance}%) scale(0.6)`,
+										offset: 0.6
+									},
+									{
+										opacity: 0,
+										transform: `translate(${-50 + Math.cos(angle) * (distance + 30)}%, ${-50 + Math.sin(angle) * (distance + 30)}%) scale(0)`
+									}
+								], {
+									duration: duration,
+									easing: 'cubic-bezier(0.1, 0.8, 0.3, 1)',
+									fill: 'forwards'
+								});
+
+								animation.onfinish = () => particle.remove();
 							}
 
-							// ----- 6. 创建全屏Canvas（用于绘制月牙）-----
-							const canvas = document.createElement('canvas');
-							const ctx = canvas.getContext('2d');
-							canvas.style.position = 'fixed';
-							canvas.style.top = '0';
-							canvas.style.left = '0';
-							canvas.style.width = '100%';
-							canvas.style.height = '100%';
-							canvas.style.pointerEvents = 'none';
-							canvas.style.zIndex = '9999';
-							document.body.appendChild(canvas);
+							// 添加一个冲击波圆环（类似爆炸光晕）
+							const wave = document.createElement('div');
+							Object.assign(wave.style, {
+								position: 'absolute',
+								left: '0',
+								top: '0',
+								width: '20px',
+								height: '20px',
+								borderRadius: '50%',
+								border: '4px solid #ff8800',
+								transform: 'translate(-50%, -50%) scale(0)',
+								opacity: '1',
+								boxShadow: '0 0 20px rgba(255, 68, 0, 0.8)'
+							});
+							explosion.appendChild(wave);
+							const waveAnim = wave.animate([
+								{ transform: 'translate(-50%, -50%) scale(0)', opacity: 1, borderWidth: '6px' },
+								{ transform: 'translate(-50%, -50%) scale(4)', opacity: 0, borderWidth: '1px' }
+							], { duration: 600, easing: 'ease-out' });
+							waveAnim.onfinish = () => wave.remove();
 
-							const resize = () => {
-								canvas.width = window.innerWidth;
-								canvas.height = window.innerHeight;
-							};
-							resize();
-							window.addEventListener('resize', resize);
+							// 爆炸容器在动画结束后移除
+							setTimeout(() => {
+								if (explosion.parentNode) explosion.remove();
+							}, 1000);
+						}
 
-							// ----- 7. 动画主循环（只绘制月牙）-----
-							function animate(now) {
-								let elapsed = now - startTime;
-								let progress = Math.min(1, Math.max(0, elapsed / duration));
-								const easeOut = progress * (2 - progress); // 前期变大更快
+						// ----- 6. 创建全屏Canvas（用于绘制月牙）-----
+						const canvas = document.createElement('canvas');
+						const ctx = canvas.getContext('2d');
+						canvas.style.position = 'fixed';
+						canvas.style.top = '0';
+						canvas.style.left = '0';
+						canvas.style.width = '100%';
+						canvas.style.height = '100%';
+						canvas.style.pointerEvents = 'none';
+						canvas.style.zIndex = '9999';
+						document.body.appendChild(canvas);
 
-								// 当前剑气坐标和尺寸
-								const curX = startX + (endX - startX) * easeOut;
-								const curY = startY + (endY - startY) * easeOut;
-								const curLongRadius = startLongRadius + (endLongRadius - startLongRadius) * easeOut;
-								const angle = Math.atan2(endY - startY, endX - startX);
+						const resize = () => {
+							canvas.width = window.innerWidth;
+							canvas.height = window.innerHeight;
+						};
+						resize();
+						window.addEventListener('resize', resize);
 
-								// ----- 爆炸触发检测 -----
-								for (let tp of targetsPos) {
-									if (!explodedSet.has(tp.id)) {
-										const dist = Math.hypot(curX - tp.x, curY - tp.y);
-										if (dist < EXPLODE_RADIUS) {
-											explodedSet.add(tp.id);
-											createExplosionAt(tp.x, tp.y); // 调用粒子爆炸
-										}
+						// ----- 7. 动画主循环（只绘制月牙）-----
+						function animate(now) {
+							let elapsed = now - startTime;
+							let progress = Math.min(1, Math.max(0, elapsed / duration));
+							const easeOut = progress * (2 - progress); // 前期变大更快
+
+							// 当前剑气坐标和尺寸
+							const curX = startX + (endX - startX) * easeOut;
+							const curY = startY + (endY - startY) * easeOut;
+							const curLongRadius = startLongRadius + (endLongRadius - startLongRadius) * easeOut;
+							const angle = Math.atan2(endY - startY, endX - startX);
+
+							// ----- 爆炸触发检测 -----
+							for (let tp of targetsPos) {
+								if (!explodedSet.has(tp.id)) {
+									const dist = Math.hypot(curX - tp.x, curY - tp.y);
+									if (dist < EXPLODE_RADIUS) {
+										explodedSet.add(tp.id);
+										createExplosionAt(tp.x, tp.y); // 调用粒子爆炸
 									}
 								}
-
-								// 绘制月牙剑气
-								ctx.clearRect(0, 0, canvas.width, canvas.height);
-								ctx.save();
-
-								ctx.translate(curX, curY);
-								ctx.rotate(angle);
-								ctx.scale(flatRatio, 1);
-								// 主体（白色半透明）
-								ctx.beginPath();
-								ctx.arc(0, 0, curLongRadius, 0, Math.PI * 2);
-								ctx.fillStyle = `rgba(255, 255, 255, ${0.9 - progress * 0.5})`;
-								ctx.fill();
-								// 挖孔形成月牙
-								ctx.globalCompositeOperation = 'destination-out';
-								ctx.beginPath();
-								const holeOffsetX = -curLongRadius * holeOffsetRatio;
-								const holeOffsetY = 0;
-								ctx.arc(holeOffsetX, holeOffsetY, curLongRadius * holeRadiusRatio, 0, Math.PI * 2);
-								ctx.fill();
-								ctx.globalCompositeOperation = 'source-over';
-								// 外发光
-								ctx.shadowBlur = 20;
-								ctx.shadowColor = 'rgba(200, 220, 255, 0.9)';
-								ctx.beginPath();
-								ctx.arc(0, 0, curLongRadius * 0.6, 0, Math.PI * 2);
-								ctx.fillStyle = `rgba(255, 255, 200, ${0.4 * (1 - progress)})`;
-								ctx.fill();
-								ctx.shadowBlur = 0;
-								ctx.restore();
-
-								if (progress < 1) {
-									requestAnimationFrame(animate);
-								} else {
-									window.removeEventListener('resize', resize);
-									canvas.remove();
-								}
 							}
 
-							requestAnimationFrame(animate);
-						}, player.playerid, targetIds);
+							// 绘制月牙剑气
+							ctx.clearRect(0, 0, canvas.width, canvas.height);
+							ctx.save();
+
+							ctx.translate(curX, curY);
+							ctx.rotate(angle);
+							ctx.scale(flatRatio, 1);
+							// 主体（白色半透明）
+							ctx.beginPath();
+							ctx.arc(0, 0, curLongRadius, 0, Math.PI * 2);
+							ctx.fillStyle = `rgba(255, 255, 255, ${0.9 - progress * 0.5})`;
+							ctx.fill();
+							// 挖孔形成月牙
+							ctx.globalCompositeOperation = 'destination-out';
+							ctx.beginPath();
+							const holeOffsetX = -curLongRadius * holeOffsetRatio;
+							const holeOffsetY = 0;
+							ctx.arc(holeOffsetX, holeOffsetY, curLongRadius * holeRadiusRatio, 0, Math.PI * 2);
+							ctx.fill();
+							ctx.globalCompositeOperation = 'source-over';
+							// 外发光
+							ctx.shadowBlur = 20;
+							ctx.shadowColor = 'rgba(200, 220, 255, 0.9)';
+							ctx.beginPath();
+							ctx.arc(0, 0, curLongRadius * 0.6, 0, Math.PI * 2);
+							ctx.fillStyle = `rgba(255, 255, 200, ${0.4 * (1 - progress)})`;
+							ctx.fill();
+							ctx.shadowBlur = 0;
+							ctx.restore();
+
+							if (progress < 1) {
+								requestAnimationFrame(animate);
+							} else {
+								window.removeEventListener('resize', resize);
+								canvas.remove();
+							}
+						}
+
+						requestAnimationFrame(animate);
+					}, player.playerid, targetIds);
 					const num = player.countCards("h", card => get.type(card) == "basic");
-                    trigger.directHit.addArray(targets);
-                    for(let target of targets) {
-                        await target.randomDiscard({ num: 2, discarder: player, position: "he" });
-                    }
-                    trigger.baseDamage += num;
-                    await player.draw(2);
-                    trigger.card.storage.ql_zhensui_1 = true;
-                    player.when({ player: "useCardAfter" })
-                    .filter(evt => evt?.card?.storage?.ql_zhensui_1 && !player.hasHistory("sourceDamage", evt => evt?.card?.storage?.ql_zhensui_1))
-                    .step(async (event, trigger, player) => {
-                        await game.doAsyncInOrder(targets, async current => {
-                            await current.loseHp(trigger.baseDamage);
-                        })
-                    })
-                    player.storage.ql_zhensui_effect--;
-                },
-            },
-            basic: {
+					trigger.directHit.addArray(targets);
+					for (let target of targets) {
+						await target.randomDiscard({ num: 2, discarder: player, position: "he" });
+					}
+					trigger.baseDamage += num;
+					await player.draw(2);
+					trigger.card.storage.ql_zhensui_1 = true;
+					player.when({ player: "useCardAfter" })
+						.filter(evt => evt?.card?.storage?.ql_zhensui_1 && !player.hasHistory("sourceDamage", evt => evt?.card?.storage?.ql_zhensui_1))
+						.step(async (event, trigger, player) => {
+							await game.doAsyncInOrder(targets, async current => {
+								await current.loseHp(trigger.baseDamage);
+							})
+						})
+					player.storage.ql_zhensui_effect--;
+				},
+			},
+			basic: {
 				enable: "chooseToUse",
 				filter(event, player) {
-					if(!player.countCards("h", card => get.type(card) == "basic")) {
+					if (!player.countCards("h", card => get.type(card) == "basic")) {
 						return false;
 					}
-					for(let i of lib.inpile) {
+					for (let i of lib.inpile) {
 						let type = get.type2(i);
-						if((type == "basic" || type == "trick") && event.filterCard(get.autoViewAs({ name: i }, "unsure"), player, event)) {
+						if ((type == "basic" || type == "trick") && event.filterCard(get.autoViewAs({ name: i }, "unsure"), player, event)) {
 							return true;
 						}
 					}
@@ -572,10 +828,10 @@ const skills = {
 							viewAs: { name: links[0][2], nature: links[0][3], storage: { ql_zhensui: true } },
 							async precontent(event, trigger, player) {
 								player.when({ player: "useCard" })
-								.filter(evt => evt?.card?.storage?.ql_zhensui)
-								.step(async (event, trigger, player) => {
-									trigger.baseDamage++;
-								})
+									.filter(evt => evt?.card?.storage?.ql_zhensui)
+									.step(async (event, trigger, player) => {
+										trigger.baseDamage++;
+									})
 							},
 						};
 					},
@@ -590,7 +846,7 @@ const skills = {
 					var type = get.type2(name);
 					return (type == "basic" || type == "trick") && player.countCards("she") > 0;
 				},
-            },
+			},
 			cover: {
 				charlotte: true,
 				intro: {
@@ -600,29 +856,29 @@ const skills = {
 					global: ["damageBegin4", "phaseEnd", "useCard"],
 				},
 				frequent(event, player) {
-					if(event.name == "useCard") {
+					if (event.name == "useCard") {
 						return true;
 					}
 					return false;
 				},
 				filter(event, player) {
-					if(event.name == "damage" && event.player == player) {
+					if (event.name == "damage" && event.player == player) {
 						return false;
 					}
 					return player.getStorage("ql_zhensui_cover").includes(event.player);
 				},
 				prompt2(event, player) {
-					if(event.name == "damage") {
+					if (event.name == "damage") {
 						return `是否代替${get.translation(event.player)}承受该次伤害`;
 					}
 					return `是否分配牌堆顶的牌`;
 				},
 				async content(event, trigger, player) {
-					if(trigger.name == "useCard" && player.countMark("ql_shenhu") < 6) {
+					if (trigger.name == "useCard" && player.countMark("ql_shenhu") < 6) {
 						player.addMark("ql_shenhu", true);
 						return;
 					}
-					if(trigger.name == "damage") {
+					if (trigger.name == "damage") {
 						/*trigger.cancel();
 						await player.damage(trigger.num, trigger?.source);*/
 						trigger.player = player;
@@ -634,38 +890,38 @@ const skills = {
 						})
 						.set("totalCount", [1, 7])
 						.forResult();
-					if(result.bool) {
-						for(let [target, num] of result.map) {
+					if (result.bool) {
+						for (let [target, num] of result.map) {
 							await target.draw(num);
 						}
 					}
 				},
 			},
-        },
-        target:  {
-            firstDo: true,
-            mod: {
-    			targetEnabled(card, player, target) {
-    				return true;
-    			},
-    		},
-    		priority: Infinity,
 		},
-        priority: Infinity,
-    },
+		target: {
+			firstDo: true,
+			mod: {
+				targetEnabled(card, player, target) {
+					return true;
+				},
+			},
+			priority: Infinity,
+		},
+		priority: Infinity,
+	},
 	//上阳台帖
 	ql_yinjian: {
 		trigger: {
-			global: ["chooseToRespondBegin","chooseToUseBegin"],
+			global: ["chooseToRespondBegin", "chooseToUseBegin"],
 		},
 		forced: true,
 		filter(event, player) {
 			if (event.responded) {
-	        	return false;
-	      	}
-	      	if (!event.filterCard({ name: "shan", isCard: true }, event.player, event)) {
-	        	return false;
-	      	}
+				return false;
+			}
+			if (!event.filterCard({ name: "shan", isCard: true }, event.player, event)) {
+				return false;
+			}
 			return true;
 		},
 		logTarget: "player",
@@ -682,8 +938,8 @@ const skills = {
 			if (result.bool) {
 				//await player.draw();
 				trigger.result = { bool: true, card: { name: "shan", isCard: true } };
-		        trigger.responded = true;
-		        trigger.animate = false;
+				trigger.responded = true;
+				trigger.animate = false;
 			}
 		},
 	},
@@ -705,19 +961,19 @@ const skills = {
 		subSkill: {
 			use: {
 				trigger: {
-					player: ["shaMiss","eventNeutralized"],
+					player: ["shaMiss", "eventNeutralized"],
 					target: "shaMiss",
 				},
 				usable: 1,
 				filter(event, player) {
 					if (event.type != "card" || event.card.name != "sha") {
-			            return false;
-			        }
+						return false;
+					}
 					const card = new lib.element.VCard({ name: "sha" });
 					if (event.player != player) {
 						return event.player?.isIn() && player.canUse(card, event.player, false, false);
 					}
-			        return event.target?.isIn() && player.canUse(card, event.target, false, false);
+					return event.target?.isIn() && player.canUse(card, event.target, false, false);
 				},
 				logTarget(event, player) {
 					return event[event.player == player ? "target" : "player"];
@@ -758,18 +1014,18 @@ const skills = {
 			].map((info, index) => [index, info]);
 			event.result = await player
 				.chooseButton([
-					`${get.translation(event.skill)}：移去任意枚“逍遥”标记执行等量项`, 
+					`${get.translation(event.skill)}：移去任意枚“逍遥”标记执行等量项`,
 					[list.slice(0, 2), "tdnodes"],
-                    [list.slice(2, 4), "tdnodes"],
-                    [
-                        dialog => {
-                            dialog.buttons.forEach(i => {
-                                i.style.setProperty("width", "200px", "important");
-                                i.style.setProperty("text-align", "left", "important");
-                            });
-                        },
-                        "handle",
-                    ],
+					[list.slice(2, 4), "tdnodes"],
+					[
+						dialog => {
+							dialog.buttons.forEach(i => {
+								i.style.setProperty("width", "200px", "important");
+								i.style.setProperty("text-align", "left", "important");
+							});
+						},
+						"handle",
+					],
 				], [1, player.countMark("ql_xiaoyao")])
 				.set("ai", button => {
 					return 1 + Math.random();
@@ -1000,16 +1256,16 @@ const skills = {
 		}
 	},
 	ql_xili: {
-	    mod: {
-	        targetInRange(card) {
-	            return true;
-	        },
-	        cardUsable(card) {
-	            if(card.storage.ql_xili) {
-	                return Infinity;
-	            }
-	        },
-	    },
+		mod: {
+			targetInRange(card) {
+				return true;
+			},
+			cardUsable(card) {
+				if (card.storage.ql_xili) {
+					return Infinity;
+				}
+			},
+		},
 		enable: "phaseUse",
 		usable: 1,
 		locked: true,
@@ -1034,7 +1290,7 @@ const skills = {
 					})
 					.forResult();
 				if (result?.targets?.length) {
-					const [ target ] = result.targets;
+					const [target] = result.targets;
 					player.line(target);
 					while (true) {
 						cards = player.getCards("h", card => card.hasGaintag(event.name));
@@ -6512,11 +6768,11 @@ const skills = {
 			backup: {
 				log: false,
 				filterCard(card, player) {
-					if(get.itemtype(card) != "card") {
+					if (get.itemtype(card) != "card") {
 						return false;
 					}
 					const { cards } = ui.selected;
-					if(!cards.length) {
+					if (!cards.length) {
 						return true;
 					}
 					const name = get.event().funcName;

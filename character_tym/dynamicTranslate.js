@@ -1,6 +1,19 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 const dynamicTranslates = {
+	ql_kenquan(player, skill) {
+		const bool = player.storage[skill];
+		let yang = "【推心置腹】",
+			yin = "【无中生有】";
+		if (!bool) {
+			yang = `<span class=firetext>${yang}</span>`;
+		} else {
+			yin = `<span class=bluetext>${yin}</span>`;
+		}
+		const start = "转换技，你不因该技能成为牌的目标时，可以视为使用一张无距离限制的，",
+			end = "。";
+		return `${start}阳：${yang}；阴：${yin}${end}`;
+	},
 	ql_dansuan(player, skill) {
 		let info = lib.translate[`${skill}_info`];
 		const num = player.countMark("ql_chuanshu");

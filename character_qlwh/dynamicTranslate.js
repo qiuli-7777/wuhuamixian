@@ -1,5 +1,18 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const dynamicTranslates = {
+	ql_yongtan(player, skill) {
+		const bool = player.storage[skill];
+		let yang = "出牌阶段，你可以弃置两张牌令一名角色造成伤害+1目改为雷电伤害至其回合结束",
+			yin = "出牌阶段，你可以与一名角色拼点，赢得角色回复一点体力或获得一点护甲，然后你可以获得体力值不小于你的角色区域内各一张牌";
+		if (bool) {
+			yin = `<span class="bluetext">${yin}</span>`;
+		} else {
+			yang = `<span class="firetext">${yang}</span>`;
+		}
+		const start = `转换技，`,
+			end = "。";
+		return `${start}阳：${yang}；阴：${yin}${end}`;
+	},
 	ql_zhujia(player, skill) {
 		let str = lib.translate[skill + "_info"];
 		str = str.replace(/（[^）]*）/g, "");

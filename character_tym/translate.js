@@ -1,5 +1,10 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const translates = {
+    ql_shenzhi: "沈栀",
+    ql_kenquan: "恳劝",
+    ql_kenquan_info: "转换技，你不因该技能成为牌的目标时，可以视为使用一张无距离限制的，阳：【推心置腹】；阴：【无中生有】。",
+    ql_guitong: "归统",
+    ql_guitong_info: "限定技，出牌阶段，你可以令一名其他角色本回合不能使用或打出牌，然后你将区域内的伤害牌随机依次当做【杀】对其使用，然后你死亡并分配你的其他技能。。",
     ql_chiyuan: "蚩鸢",
     ql_bingchuan: "兵传",
     ql_bingchuan_info: `出牌阶段限一次和你受到伤害后，你可以观看并弃置当前回合角色两张牌（牌名字数和需为2，3，5，6，9），然后回复一点体力或令你出杀次数+1，然后装备攻击范围为这两张牌牌名字数和的装备，这些装备离开你装备区时销毁。你每失去X张牌，摸X张牌（X为你装备牌的攻击范围）。`,
@@ -15,6 +20,7 @@ const translates = {
     ql_bingchuan_ji_info: "锁定技，造成伤害后，若受伤角色体力值为1，其受到一点无来源的雷电伤害。",
     ql_bingchuan_gong: "舒泣弓",
     ql_bingchuan_gong_info: "锁定技，你使用牌期间，已经受伤的其他角色不能使用或打出牌。",
+    ql_bingchuan_shu_skill: "镇泰殳",
 
     ql_tangtian: "唐恬",
     ql_shenxing: "神醒",

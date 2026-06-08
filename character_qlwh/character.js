@@ -1,4 +1,12 @@
 const characters = {
+	ql_weinasi: {
+		sex: "female",
+		group: "hua",
+		hp: 3,
+		skills: ["ql_yongtan", "ql_daolie", "ql_tongxing"],
+		img: "extension/五花米线/skin/ql_weinasi.jpg",
+		dieAudios: [],
+	},
     ql_tianwang: {
 		sex: "male",
 		group: "hua",
