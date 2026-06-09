@@ -62,6 +62,13 @@ export let config = {
         init: false,
         intro: "启用后，拥有焕彰效果的技能得到增强",
     },
+
+    //天涯门包增强
+    ql_Door: {
+        name: "<font color = '#d2bb20'>天涯门</font>增强",
+        init: false,
+        intro: "启用后，拥有致知效果的技能得到增强",
+    },
     
     // 月相
     ql_moonPhase: {

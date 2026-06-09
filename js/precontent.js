@@ -147,7 +147,7 @@ export async function precontent(config, pack) {
 				return false;
 			}
 			const regexp = /^chooseCharacter(OL)?$/;
-			return _status.connectMode
+			return game.openConnect()
 				// 不是联机模式的话不发动
 				&& event.player
 				// 是在线玩家选择
@@ -454,6 +454,9 @@ export async function precontent(config, pack) {
 		},
 		openGuard() {
 			return lib.config[`extension_五花米线_ql_guard`] === true;
+		},
+		openDoor() {
+			return lib.config[`extension_五花米线_ql_Door`] === true;
 		},
 	});
 	//职业相关

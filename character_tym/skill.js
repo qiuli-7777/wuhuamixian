@@ -949,7 +949,7 @@ const skills = {
         },
         async content(event, trigger, player) {
             await player.modedDiscard(event.cards);
-            trigger.num += event.cards.length + 1;
+            trigger.num += (game.openDoor() ? event.cards.length * 2 : event.cards.length + 1);
             trigger.player.addTempSkill(event.name + "_effect");
             trigger.player.addMark(event.name + "_effect", event.cards.length, false);
             player.when({ player: "phaseEnd" })
@@ -982,7 +982,7 @@ const skills = {
             return !["basic", "trick", "equip"].every(type => player.getCards("h").map(card => get.type2(card, false)).unique().includes(type));
         },
         async content(event, trigger, player) {
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < (game.openDoor() ? 5 : 3); i++) {
                 await player.draw();
                 if (["basic", "trick", "equip"].every(type => player.getCards("h").map(card => get.type2(card, false)).unique().includes(type))) {
                     break;
@@ -1037,7 +1037,7 @@ const skills = {
                     player: ["useCard", "respond"],
                 },
                 filter(event, player) {
-                    return !player.getStorage("ql_erxiang_canceled").includes(get.type2(event.card));
+                    return game.openDoor() || !player.getStorage("ql_erxiang_canceled").includes(get.type2(event.card));
                 },
                 async content(event, trigger, player) {
                     const cardx = trigger.card;
@@ -2459,7 +2459,7 @@ const skills = {
             trigger.cancel();
             if (trigger.name == "damage") {
                 if (trigger?.source?.getCards("he")) {
-                    await player.discardPlayerCard(trigger.source, "hej", _status.connectMode ? 1 : [1, 2]);
+                    await player.discardPlayerCard(trigger.source, "hej", (game.openDoor() ? [1, 2] : 1));
                 }
                 await player.loseHp();
             }
@@ -2468,7 +2468,7 @@ const skills = {
     ql_luyou: {
         enable: "chooseToUse",
         filter(event, player) {
-            if (player.countCards("h") == 3) {
+            if (player.countCards("h") == (game.openDoor() ? 5 : 3)) {
                 return false;
             }
             return get.inpileVCardList(info => {
@@ -2496,7 +2496,7 @@ const skills = {
                 const player = get.player(),
                     card = new lib.element.VCard({ name: button.link[2], nature: button.link[3], isCard: true });
                 let eff = _status.event.getParent().type == "phase" ? player.getUseValue(card) : 3;
-                return eff + 5 - player.countCards("h");
+                return eff + (game.openDoor() ? 5 : 3) - player.countCards("h");
             },
             backup(links, player) {
                 return {
@@ -2510,12 +2510,12 @@ const skills = {
                     popname: true,
                     ignoreMod: true,
                     filterCard(card, player) {
-                        return player.countCards("h") > 3 && lib.filter.cardDiscardable(card, player, "ql_luyou");
+                        return player.countCards("h") > (game.openDoor() ? 5 : 3) && lib.filter.cardDiscardable(card, player, "ql_luyou");
                     },
                     position: "h",
                     selectCard() {
                         const player = get.player(),
-                            num = player.countCards("h") - 3;
+                            num = player.countCards("h") - (game.openDoor() ? 5 : 3);
                         if (num > 0) {
                             return num;
                         }
@@ -2531,7 +2531,7 @@ const skills = {
                         if (cards.length) {
                             await player.modedDiscard(cards);
                         } else {
-                            await player.drawTo(5);
+                            await player.drawTo((game.openDoor() ? 5 : 3));
                         }
                         const { name, nature } = event.result.card;
                         event.result.card = new lib.element.VCard({ name, nature, isCard: true });
@@ -2540,7 +2540,7 @@ const skills = {
                 };
             },
             prompt(links, player) {
-                const num = player.countCards("h") - 3;
+                const num = player.countCards("h") - (game.openDoor() ? 5 : 3);
                 const str = num > 0 ? `弃置${get.cnNumber(num)}张手牌` : `摸${get.cnNumber(-num)}张牌`;
                 return `${str}，然后视为使用一张${get.translation(links[0][3] || "")}${get.translation(links[0][2])}`;
             },
@@ -2549,12 +2549,12 @@ const skills = {
             if (get.type(name) != "basic" && name != "wuxie") {
                 return false;
             }
-            return player.countCards("h") != 3;
+            return player.countCards("h") != (game.openDoor() ? 5 : 3);
         },
         ai: {
             save: true,
             skillTagFilter(player, tag) {
-                return player.countCards("h") != 5;
+                return player.countCards("h") != (game.openDoor() ? 5 : 3);
             },
             order: 3,
             result: {
@@ -2672,7 +2672,9 @@ const skills = {
                     await player.turnOver();
                     await player.draw(player.maxHp);
                 } else {
-                    await player.chooseToDiscard("e", true);
+                    if(!game.openDoor()){
+                        await player.chooseToDiscard("e", true);
+                    }
                     await player.moveCard();
                 }
             } else {
