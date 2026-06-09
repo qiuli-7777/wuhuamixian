@@ -2,7 +2,7 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const translates = {
     ql_shenzhi: "沈栀",
     ql_kenquan: "恳劝",
-    ql_kenquan_info: "转换技，你不因该技能成为牌的目标时，可以视为使用一张无距离限制的，阳：【推心置腹】；阴：【无中生有】。",
+    ql_kenquan_info: "转换技，你不因该技能成为牌的目标时，可以视为使用一张无距离限制的，阳：【推心置腹】；阴：【无中生有】。结算后你将此牌置入弃牌堆。",
     ql_guitong: "归统",
     ql_guitong_info: "限定技，出牌阶段，你可以令一名其他角色本回合不能使用或打出牌，然后你将区域内的伤害牌随机依次当做【杀】对其使用，然后你死亡并分配你的其他技能。。",
     ql_chiyuan: "蚩鸢",

@@ -11,7 +11,7 @@ const dynamicTranslates = {
 			yin = `<span class=bluetext>${yin}</span>`;
 		}
 		const start = "转换技，你不因该技能成为牌的目标时，可以视为使用一张无距离限制的，",
-			end = "。";
+			end = "。结算后你将此牌置入弃牌堆。";
 		return `${start}阳：${yang}；阴：${yin}${end}`;
 	},
 	ql_dansuan(player, skill) {

@@ -49,11 +49,39 @@ const skills = {
             const card = get.autoViewAs({ name: bool ? "wuzhong" : "tuixinzhifu", isCard: true, storage: { [name]: true } });
             player.changeZhuanhuanji(name);
             await player.useCard(card, target, false);
+            player
+                .when({ global: "useCardAfter" })
+                .filter(evt => evt.card == trigger.card)
+                .then(async (event, trigger, player) => {
+                    const cardList = trigger.cards.slice();
+                    const lose_list = [], players = game.filterPlayer();
+                    players.forEach((current) => {
+                        const cards = current.getCards("hej", card => {
+                            const cards = card?.cards?.length ? card.cards : [card];
+                            return cardList.containsSome(...cards);
+                        });
+                        if (cards.length > 0) {
+                            current.$throw(cards);
+                            lose_list.push([current, cards]);
+                            cardList.removeArray(cards);
+                        }
+                    });
+                    if (lose_list.length) {
+                        await game.loseAsync({ lose_list }).setContent("chooseToCompareLose");
+                        await game.delayx();
+                    }
+                    if (cardList.length) {
+                        await game.cardsDiscard(cardList);
+                    }
+                });
         },
     },
     ql_guitong: {
         limited: true,
         enable: "phaseUse",
+        filter(event, player) {
+            return player.countCards("hesj", card => get.is.damageCard(card, true));
+        },
         filterCard(card) {
             return get.is.damageCard(card, true);
         },
@@ -67,12 +95,19 @@ const skills = {
         async content(event, trigger, player) {
             const { name, target } = event;
             player.awakenSkill(name);
+            const limit = game.openDoor() ? [name + "_feng", "baiban"] : [
+                [2, name + "_feng"],
+                [3, "baiban"],
+            ].reduce((result, [filter, value]) => {
+                if(game.roundNumber >= filter) result.push(value);
+                return result;
+            }, [])
             player.line(target);
-            target.addTempSkill(name + "_feng");
+            target.addTempSkill(limit);
             let list = player.getCards("hesj", card => get.is.damageCard(card, true));
             while(target.isIn()) {
                 const cards = list.randomGets(1);
-                const card = get.autoViewAs({ name: "sha" });
+                const card = get.autoViewAs({ name: "sha", cards: [cards] });
                 await player.useCard(card, cards, target, false, false);
                 list.removeArray(cards);
                 if(!list.length) {
@@ -80,6 +115,11 @@ const skills = {
                 }
             }
             const skills = player.getSkills(null, false, false).filter(skill => !get.info(skill).charlotte && skill != name);
+            skills.forEach(skill => {
+                if(skill == "ql_kenquan") {
+                    get.info(skill).usable = (game.openDoor() ? Infinity : 1);
+                }
+            });
             while(skills.length) {
                 const result = await player.chooseButtonTarget({
                     createDialog: [
