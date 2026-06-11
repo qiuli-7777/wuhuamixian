@@ -4,7 +4,10 @@ const translates = {
     ql_kenquan: "恳劝",
     ql_kenquan_info: "转换技，你不因该技能成为牌的目标时，可以视为使用一张无距离限制的，阳：【推心置腹】；阴：【无中生有】。结算后你将此牌置入弃牌堆。",
     ql_guitong: "归统",
-    ql_guitong_info: "限定技，出牌阶段，你可以令一名其他角色本回合不能使用或打出牌，然后你将区域内的伤害牌随机依次当做【杀】对其使用，然后你死亡并分配你的其他技能。。",
+    ql_guitong_info: "限定技，出牌阶段，你可以令一名其他角色本回合不能使用或打出牌且技能失效，然后你将区域内的伤害牌随机依次当做【杀】对其使用，然后你死亡并分配你的其他技能。。",
+    ql_guitong_append: `<span style='font-family:yuanli'>
+				弱化：第二轮获得令目标不能使用或打出牌效果，第三轮获得目标技能失效效果。分配出去的【恳劝】每回合限一次
+			</span>`,
     ql_chiyuan: "蚩鸢",
     ql_bingchuan: "兵传",
     ql_bingchuan_info: `出牌阶段限一次和你受到伤害后，你可以观看并弃置当前回合角色两张牌（牌名字数和需为2，3，5，6，9），然后回复一点体力或令你出杀次数+1，然后装备攻击范围为这两张牌牌名字数和的装备，这些装备离开你装备区时销毁。你每失去X张牌，摸X张牌（X为你装备牌的攻击范围）。`,
@@ -36,12 +39,21 @@ const translates = {
     ql_dansuan_info: "准备阶段，结束阶段，和你受到伤害后，你卜算X并获得其中任意张牌（每回合至多以此法获得X-2张牌）。",
     ql_lingyong: "凌勇",
     ql_qunqi: "群起",
-    ql_qunqi_info: "一名角色摸牌阶段，你可以弃置一张装备牌令其额外摸两张牌且出牌阶段可额外使用一张【杀】（可叠加）。",
+    ql_qunqi_info: "一名角色摸牌阶段，你可以弃置一张装备牌令其额外摸两张牌且出牌阶段可额外使用一张【杀】（可叠加操作）。",
+    ql_qunqi_append: `<span style='font-family:yuanli'>
+				弱化：叠加操作改为摸一张
+			</span>`,
     ql_diance: "点册",
-    ql_diance_info: "锁定技，准备阶段，你摸牌直到手牌中有三种类型的牌（单次至多摸至多五张）。",
+    ql_diance_info: "锁定技，准备阶段，你摸牌直到手牌中有三种类型的牌（单次至多摸五张）。",
+    ql_diance_append: `<span style='font-family:yuanli'>
+				弱化：单次至多摸三张
+			</span>`,
     ql_jiangwutong: "江雾瞳",
     ql_erxiang: "二象",
     ql_erxiang_info: "锁定技，每轮开始时，你选择一名不为你上一轮【二象】目标其他角色，其本轮使用或打出牌时，需弃置一张同名牌否则取消之。",
+    ql_erxiang_append: `<span style='font-family:yuanli'>
+				弱化：每回合每种牌名只能取消一次
+			</span>`,
     ql_jiahui: "假惠",
     ql_jiahui_info: "你造成和受到伤害后，可以令受伤角色摸一张牌，然后你可以获得其区域内一张牌。",
     ql_qingjiuqiu: "青九丘",
@@ -90,13 +102,22 @@ const translates = {
     ql_linlingning: "林凌宁",
     ql_jijie: "极界",
     ql_jijie_info: "锁定技，你的体力上限为1.你受到伤害改为流失一点体力并弃置伤害来源两张牌。",
+    ql_jijie_append: `<span style='font-family:yuanli'>
+				弱化：弃置伤害来源一张牌
+			</span>`,
     ql_luyou: "鹿佑",
     ql_luyou_info: "你可以将手牌数调整为5视为使用或打出一张基本牌或【无懈可击】。",
+    ql_luyou_append:  `<span style='font-family:yuanli'>
+				弱化：调整为3
+			</span>`,
     ql_yelingxi: "叶灵曦",
     ql_youren: "游刃",
     ql_youren_info: "每回合限X次，你于出牌阶段外可以视为使用一张普通锦囊牌（X为你场上牌数）。",
     ql_fengling: "封灵",
     ql_fengling_info: "你使用过牌的回合结束阶段，若你手牌数小于体力上限，你可以翻面并摸体力上限张牌，否则你可以移动场上一张牌。你一次性获得超过一张牌后，可以使用一张牌。",
+    ql_fengling_append:  `<span style='font-family:yuanli'>
+				弱化：若你要移动牌，你需要弃置一张装备牌
+			</span>`,
     ql_shenshen: "申申",
     ql_yingce: "应策",
     ql_yingce_info: "准备阶段，你可以视为使用一张普通锦囊牌，此牌结算过程中你获得的牌无距离次数限制且不可被响应。",

@@ -36,10 +36,7 @@ const skills = {
                         return target != player && target.countCards("hej");
                     })
                     .set("ai", (target) => {
-                        if(get.attitude(player, target) > 0 && target.countCards("j")) {
-                            return 10;
-                        }
-                        return 2;
+                        return get.effect(target, { name: "tuixinzhifu" }, get.player(), get.player());
                     })
                     .forResult());
         },
@@ -132,6 +129,7 @@ const skills = {
                     },
                     selectTarget: 1,
                 })
+                .set("ai", target => get.attitude(player, target))
                 .forResult();
                 if(result.bool) {
                     const { links, targets: [target] } = result;
@@ -162,6 +160,28 @@ const skills = {
                     cardSavable() {
                         return false;
                     },
+                },
+            },
+        },
+        ai: {
+            order: 13,
+            result: {
+                target: (player, target) => {
+                    let numd = player.countCards("hej", (card) => {
+                        if(!get.is.damageCard(card, true) || get.effect(target, { name: "sha" }, player, player) <= 0) {
+                            return 0;
+                        }
+                        return 1;
+                    }), nums = target.hp + target.hujia + game.countPlayer((current) => {
+                        if(get.attitude(current, target) > 0) {
+                            return current.countCards("hs") / 8;
+                        }
+                        return 0;
+                    });
+                    if(numd >= nums) {
+                        return -numd;
+                    }
+                    return 0;
                 },
             },
         },
@@ -2212,9 +2232,11 @@ const skills = {
                         const cards2 = player.getCards("h");
                         if (cards2.length) {
                             player.addGaintag(cards2, skill);
+                            player.addSkill(skill + "_restore");
                             //player.getCards("h", card => card.addGaintag(skill));
+                        } else {
+                            player.tempBanSkill("ql_shoudu", { global: "roundEnd" })
                         }
-                        player.addSkill(skill + "_restore");
                     },
                 };
             },

@@ -38,14 +38,14 @@ export let config = {
     //联机自由点将
     ql_connect:{
         name: "<font color = '#28e5dd'>联机自由点将</font>",
-        init: true,
+        init: false,
         intro: "启用后，玩家可在联机进行自由点将",
     },
     
     // 守卫
     ql_guard: {
         name: "开启<font color = '#ff00ff'>守卫</font>机制",
-        init: true,
+        init: false,
         intro: "启用后，角色不会失去技能和换武将牌",
     },
     
@@ -66,7 +66,7 @@ export let config = {
     //天涯门包增强
     ql_Door: {
         name: "<font color = '#d2bb20'>天涯门</font>增强",
-        init: false,
+        init: true,
         intro: "启用后，拥有致知效果的技能得到增强",
     },
     
