@@ -73,6 +73,9 @@ const translates = {
     ql_jishou_info: "你不因该技能获得牌后，可以从牌堆或弃牌堆随机获得与你获得的牌花色不同的牌各一张，然后你展示手牌并弃置区域内0张牌并令本回合该数字+1（至多为2）。",
     ql_fenhuo: "分获",
     ql_fenhuo_info: "出牌阶段限一次和你受到伤害后，你可以观看一名角色手牌将其中一种花色的牌置于牌堆顶并视为使用一张【五谷丰登】，若选择自己，你本回合使用牌没有距离次数限制且无视防具。",
+    ql_fenhuo_append: `<span style='font-family:yuanli'>
+				弱化：取消无次数限制
+			</span>`,
     ql_jiyu: "姬雨",
     ql_qiaojin: "巧劲",
     ql_qiaojin_info: "锁定技，你发动连招技时摸两张牌且触发此技能的两次使用牌事件不计入次数。",

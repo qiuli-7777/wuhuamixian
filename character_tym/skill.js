@@ -1707,7 +1707,9 @@ const skills = {
                         return true;
                     },
                     cardUsable(card) {
-                        return Infinity;
+                        if(game.openDoor()) {
+                            return Infinity;
+                        }
                     },
                 },
                 trigger: {
@@ -2235,7 +2237,15 @@ const skills = {
                             player.addSkill(skill + "_restore");
                             //player.getCards("h", card => card.addGaintag(skill));
                         } else {
-                            player.tempBanSkill("ql_shoudu", { global: "roundEnd" })
+                            player.when({ global: "roundEnd" })
+                            .step(async (event, trigger, player) => {
+                                const skill = "ql_shoudu";
+                                if (player.hasSkill(skill, null, null, false) && !player.hasSkill(skill)) {
+                                    player.popup("守渡");
+                                    player.restoreSkill(skill);
+                                    game.log(player, "恢复了技能", "#g【守渡】");
+                                }
+                            })
                         }
                     },
                 };
@@ -2281,7 +2291,6 @@ const skills = {
                 },
                 async content(event, trigger, player) {
                     //game.log(event.triggername);
-                    game.log(player.hasCard(card => card.hasGaintag("ql_shoudu"), "h"));
                     const skill = "ql_shoudu";
                     if (player.hasSkill(skill, null, null, false) && !player.hasSkill(skill)) {
                         player.popup("守渡");
