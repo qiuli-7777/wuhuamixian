@@ -1,5 +1,5 @@
 {
-  "version": "1.43.3",
+  "version": "1.43.4",
   "files": {
     "audio/background/Take Flight.mp3": "539fb65ad7d7505353133bfbe10860784c887fa3",
     "audio/background/天王石刻.mp3": "3414190c3c574bb39f532a5f9e92ba4616c3d33e",
@@ -87,7 +87,7 @@
     "character_qlwh/translate.js": "6753d46bf1b72a20ac0194e8c4d12f9572164684",
     "character_qlwh/voices.js": "b25b8a3b9d91a0b8f4930ddf982e5bfb6fb667a6",
     "character_tym/card.js": "1c38a8e8c3a0cb4ce1a393281b59ea72abcb04c7",
-    "character_tym/character.js": "3618316d8d10191333d517a6f0f1049797080cbe",
+    "character_tym/character.js": "e0394573bef0aa30a43f80d9f17dd8479cea23f7",
     "character_tym/characterFilter.js": "f151fe9a64727ed12a50201cc9a55832f5880f10",
     "character_tym/characterReplace.js": "de3c9dc871c7e16bc38dd30570c641ac2db696f5",
     "character_tym/characterTitle.js": "159eb92591c2cc33f3e3908fc88b57588df0139f",
@@ -95,7 +95,7 @@
     "character_tym/index.js": "27ca1f28bd4d20b287cacd7ad17ebc0764c1333f",
     "character_tym/intro.js": "33d5c12baddd2c8e8e76f94cc11b00455faa3faa",
     "character_tym/pinyin.js": "69fc7052c927810767753e00b55af92e6de9db42",
-    "character_tym/skill.js": "1b23d4f3bcd16685bf7699324eeb8dccfab258cc",
+    "character_tym/skill.js": "142d150f6c86d02657eee59c67ec4e1fe52c56e7",
     "character_tym/sort.js": "723009572eca0f94e4320b1f46c2e0da13e1dfbd",
     "character_tym/translate.js": "fa59ab8b338168fbabc418b908b41655ab85ec8a",
     "character_tym/voices.js": "b25b8a3b9d91a0b8f4930ddf982e5bfb6fb667a6",
@@ -123,7 +123,7 @@
     "gelin/galgame.js": "67b0856e7a292eb923f03a182825b8fc5fea62c1",
     "gelin/gelin.js": "5b7f777522b39174f3e89dfb4769a177cbc04c40",
     "gelin/gouzhu.css": "3d7fd3f13fca60225e914338f482f1d66c7a3241",
-    "info.json": "eaf0d47bd7d2b2bda7f1127abf8e404ae2d46c3b",
+    "info.json": "2e14f179fce3342fae04aa13d8bb1b2251e6cdc8",
     "js/arenaReady.js": "7aa27bab43f480c1dc8a0f5a6997a3372ff34d70",
     "js/config.js": "9e0b453b276e633b573e0304f50a05bbf38ea464",
     "js/content.js": "7adde6b1dc1895c5a46b848f32c5bc5fb3ceb15d",

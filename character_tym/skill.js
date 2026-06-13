@@ -103,13 +103,13 @@ const skills = {
             target.addTempSkill(limit);
             let list = player.getCards("hesj", card => get.is.damageCard(card, true));
             while(target.isIn()) {
+                if(!list.length) {
+                    break;
+                }
                 const cards = list.randomGets(1);
                 const card = get.autoViewAs({ name: "sha", cards: [cards] });
                 await player.useCard(card, cards, target, false, false);
                 list.removeArray(cards);
-                if(!list.length) {
-                    break;
-                }
             }
             const skills = player.getSkills(null, false, false).filter(skill => !get.info(skill).charlotte && skill != name);
             skills.forEach(skill => {
@@ -355,10 +355,10 @@ const skills = {
         },
         hiddenCard(player, name) {
             let storage = player.getStorage("ql_bingchuan_shu_skill_used");
-            if(card.name == "sha" && !storage.includes("sha")) {
+            if(name == "sha" && !storage.includes("sha")) {
                 return player.countCards("hes", card => !get.is.damageCard(card, true));
             }
-            if(card.name == "shan" && !storage.incldues("shan")) {
+            if(name == "shan" && !storage.incldues("shan")) {
                 return player.countCards("hes", card => get.is.damageCard(card, true));
             }
         },
@@ -2520,6 +2520,7 @@ const skills = {
         },
         async content(event, trigger, player) {
             if (trigger.name != "damage" && trigger.name != "die" && trigger.name != "loseMaxHp") {
+                player.maxHp = 1;
                 player.hp = 1;
                 player.update();
                 return;
