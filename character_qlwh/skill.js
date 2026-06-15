@@ -2,6 +2,318 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
+	//铜坐龙
+	ql_ruolei: {
+		forced: true,
+		trigger: {
+			player: "enterGame",
+			global: ["phaseBefore", "washCard"],
+		},
+		filter(event, player, name) {
+			return (name == "washCard" || event.name != "phase" || game.phaseNumber == 0);
+		},
+		async content(event, trigger, player) {
+		    let targets;
+		    game.players.forEach(target => target.removeAdditionalSkill(`${event.name}_${player.playerid}`));
+		    if(game.countPlayer(target => target != player) >= 2) {
+    			const result = await player
+    				.chooseTarget({
+    					prompt: "请选择要移动到的角色",
+    					selectTarget: 2,
+    					filterTarget(card, player, target) {
+    						if (!ui.selected.targets?.length) {
+    							return target != player;
+    						}
+    						const targetx = ui.selected.targets[0];
+    						return target != player && (targetx == target.previous || targetx == target.next);
+    					},
+    					complexTarget: true,
+    					ai(target) {
+    						if (!ui.selected.targets?.length) {
+    							return Math.random();
+    						}
+    						return -get.attitude(get.player(), target);
+    					},
+    					forced: true,
+    				})
+    				.forResult();
+    		    targets = result.targets;
+    			targets.sortBySeat(game.findPlayer(target => target.getSeatNum() == 1));
+    			player.line(targets);
+    			game.broadcastAll(
+    				function (target1, target2) {
+    					game.swapSeat(target1, target2, null, true);
+    				},
+    				player,
+    				targets[1]
+    			);
+			} else {
+			    targets = game.filterPlayer(target => target != player);
+			    player.line(targets);
+			}
+			const result2 = await player
+				.chooseTarget({
+					prompt: "令其中任意名角色不因此失去牌后随机弃置一张牌且使用牌只能指定你为目标",
+					selectTarget: [1, 2],
+					filterTarget(card, player, target) {
+						return get.event().targets.includes(target);
+					},
+					targets,
+					ai(target) {
+						return -get.attitude(get.player(), target);
+					},
+				})
+				.forResult();
+			if (result2.bool) {
+				const { targets } = result2;
+				player.line(targets);
+				player.addTempSkill(event.name + "_clear", { player: "dieAfter" });
+				targets.forEach(target => {
+					target.addAdditionalSkill(`${event.name}_${player.playerid}`, event.name + "_debuff");
+					target.markAuto(event.name + "_debuff", player);
+				})
+			}
+		},
+		subSkill: {
+			clear: {
+				charlotte: true,
+				onremove(player, skill) {
+					game.players.forEach(target => target.removeAdditionalSkill(`${skill.slice(0, -6)}_${player.playerid}`));
+				},
+				forced: true,
+				trigger: {
+					player: "phaseJieshuBegin",
+				},
+				filter(event, player) {
+					return game.hasPlayer(current => current.getRemovableAdditionalSkills("ql_ruolei") && current != player) && game.openHuanzhang();
+				},
+				async content(event, trigger, player) {
+					await game.doAsyncInOrder(game.filterPlayer(current => current.getRemovableAdditionalSkills(event.name.slice(0, -6)) && current != player), async target => {
+						if(target.countGainableCards(player, "he")) {
+							await player.gainPlayerCard(target, "he", "visible");
+						}
+					});
+				},
+			},
+			debuff: {
+				charlotte: true,
+				onremove: true,
+				intro: {
+					content: "不因此失去牌后随机弃置一张牌且使用牌只能指定$为目标",
+				},
+				mod: {
+					playerEnabled(card, player, target) {
+						if (!player.getStorage("ql_ruolei_debuff").includes(target)) {
+							return false;
+						}
+					},
+					cardEnabled(card, player) {
+						if(get.info(card).notarget) {
+							return false;
+						}
+					},
+				},
+				trigger: {
+					player: "loseAfter",
+					global: ["equipAfter", "addJudgeAfter", "gainAfter", "loseAsyncAfter", "addToExpansionAfter"],
+				},
+				forced: true,
+				filter(event, player) {
+					if (
+						!player.hasCard(function (card) {
+							return lib.filter.cardDiscardable(card, player, "ql_ruolei_debuff");
+						}, "h")
+					) {
+						return false;
+					}
+					let evt = event.getParent("ql_ruolei_debuff");
+					if (evt && evt.player == player) {
+						return false;
+					}
+					evt = event.getl(player);
+					return evt?.cards2?.length > 0;
+				},
+				async content(event, trigger, player) {
+					const cards = player.getCards("h", card => {
+						return lib.filter.cardDiscardable(card, player, event.name);
+					});
+					if (cards.length > 0) {
+						await player.discard(cards.randomGet());
+					}
+				},
+			},
+		}
+	},
+	ql_chuimu: {
+	    mod: {
+	        cardUsable(card, player) {
+	            if(get.number(card) == "unsure" || card.cards?.some(card => card.hasGaintag("ql_chuimu"))) {
+	                return Infinity;
+	            }
+	        },
+	    },
+		trigger: {
+			player: ["damageEnd", "damageCancelled", "damageZero"],
+		},
+		filter(event, player) {
+			return event.source?.isIn();
+		},
+		async cost(event, trigger, player) {
+			event.result = await player
+				.chooseTarget({
+					complexTarget: true,
+					prompt: get.prompt2(event.skill),
+					filterTarget(card, player, target) {
+						if (!ui.selected.targets?.length) {
+							return target == get.event().sourcex;
+						}
+						return get.distance(target, player) <= 2 && target.countDiscardableCards(player, "he");
+					},
+					selectTarget: [1, 2],
+					sourcex: trigger.source,
+					ai(target) {
+						return get.effect(target, { name: "guohe_copy2" }, get.player(), get.player());
+					}
+				})
+				.forResult();
+		},
+		async content(event, trigger, player) {
+			const { targets } = event;
+			await game.doAsyncInOrder(targets, async target => {
+				if(target.countDiscardableCards(player, "he")) {
+					await player.discardPlayerCard({ target, position: "he", forced: true });
+				}
+				await target.damage();
+			});
+			await player.draw(player.getHp()).gaintag.add(event.name);
+		},
+		group: ["ql_chuimu_damage"],
+		subSkill: {
+			damage: {
+				charlotte: true,
+				forced: true,
+				trigger: {
+					source: "damageBegin1",
+				},
+				filter(event, player) {
+					return _status.currentPhase.hasHistory("useCard", evt => get.type2(evt.card) == "trick") && game.openHuanzhang();
+				},
+				async content(event, trigger, player) {
+					trigger.num += _status.currentPhase.getHistory("useCard", evt => get.type2(evt.card) == "trick").map(evt => evt.card.name).unique().length;
+				},
+			},
+		},
+	},
+	ql_lg_fulong: {
+		trigger: {
+			player: "damageBegin3",
+		},
+		filter(event, player) {
+			return event.source?.isIn() && event.source != player;
+		},
+		forced: true,
+		locked: false,
+		logTarget(event, player) {
+			return game.filterPlayer(target => get.distance(target, player) <= 2);
+		},
+		async content(event, trigger, player) {
+			const { targets } = event;
+			const num = 1 + (game.openZhizhi() ? 1 : 0) + (game.openHuanzhang() ? 1 : 0);
+			const suits = [];
+			await game.doAsyncInOrder(targets, async target => {
+				const result = await target
+					.chooseButton({
+						createDialog: [
+							`伏龙：请选择要声明的花色`,
+							[lib.suit.map(i => "lukai_" + i), "vcard"],
+						],
+						selectButton: num,
+						forced: true,
+						ai(button) {
+							return Math.random();
+						}
+					})
+					.forResult();
+				let { links } = result;
+				links = links.map(i => i[2].slice(6));
+				suits.push(...links);
+				game.log(target, "声明了", `#g${get.translation(links)}`);
+				target.popup(get.translation(links));
+			});
+			const gainSuit = lib.suit.filter(i => !suits.includes(i));
+			if (gainSuit.length) {
+				const cards = [];
+				for (const suit of gainSuit) {
+					const card = get.cardPile(card => get.suit(card) == suit);
+					if (card) {
+						cards.push(card);
+					}
+				}
+				if (cards.length) {
+					await player.gain({ cards, animate: "gain2" });
+				}
+			}
+			const next = player.judge();
+			next.set("callback", async (event, trigger, player) => {
+				const { card } = event.judgeResult;
+				if (get.position(card, true) == "o") {
+					await player.gain(card, "gain2");
+				}
+			});
+			const result = await next.forResult();
+			if (suits.includes(result.suit)) {
+				const num = get.numOf(suits, result.suit);
+				trigger.num -= num;
+				if (trigger.num <= 0) {
+					player.addTempSkill(event.name + "_damage", { player: "dieAfter" });
+					player.addMark(event.name + "_damage", 1, false);
+					if (game.openZhizhi()) {
+						player.addTempSkill(event.name + "_draw", { player: "dieAfter" });
+					}
+				}
+			}
+		},
+		subSkill: {
+			damage: {
+				charlotte: true,
+				onremove: true,
+				forced: true,
+				intro: {
+					content: "你下一次造成伤害+#",
+				},
+				trigger: {
+					source: "damageBegin1",
+				},
+				filter(event, player) {
+					return player.hasMark("ql_lg_fulong_damage");
+				},
+				async content(event, trigger, player) {
+					const num = player.countMark(event.name);
+					player.removeSkill(event.name);
+					trigger.num += num;
+				}
+			},
+			draw: {
+				charlotte: true,
+				onremove: true,
+				forced: true,
+				mark: true,
+				intro: {
+					content: "下一次造成伤害后摸伤害值张牌",
+				},
+				trigger: {
+					source: "damageSource",
+				},
+				async content(event, trigger, player) {
+					player.removeSkill(event.name);
+					await player.draw(trigger.num);
+					if(game.openHuanzhang()) {
+						await player.recover();
+					}
+				}
+			}
+		}
+	},
 	//断臂维纳斯
 	ql_yongtan: {
 		mark: true,
@@ -113,15 +425,14 @@ const skills = {
 	ql_daolie: {
 		forced: true,
 		trigger: {
-			player: "logSkillBegin",
+			player: "useSkill",
 		},
 		filter(event, player) {
 			const skill = get.sourceSkillFor(event);
-			if (skill != "ql_tongxing") {
+			if (skill != "ql_yongtan") {
 				return false;
 			}
-			console.log(event);
-			const index = player.getAllHistory("useSkill", evt => get.sourceSkillFor(evt) == skill).map(evt => evt.event).indexOf(event.log_event);
+			const index = player.getAllHistory("useSkill", evt => get.sourceSkillFor(evt) == skill).map(evt => evt.event).indexOf(event);
 			return index >= 0 && (index + 1) % 3 == 0;
 		},
 		async content(event, trigger, player) {
@@ -177,8 +488,8 @@ const skills = {
 			addMark: {
 				forced: true,
 				trigger: {
-					global: "phaseBefore",
-					player: ["enterGame", "recoverAfter", "changeHujiaAfter"],
+					global: ["recoverAfter", "changeHujiaAfter", "phaseBefore"],
+					player: ["enterGame"],
 				},
 				getIndex(event, player) {
 					if (["recover", "changeHujia"].includes(event.name)) {

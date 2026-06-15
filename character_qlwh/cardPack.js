@@ -64,10 +64,16 @@ const cardPack = {
             filterAddedTarget(card, player, target, preTarget) {
                 return target !== preTarget;
             },*/
+            async contentBefore(event, trigger, player) {
+                const evt = event.getParent();
+                const target = evt.stocktargets[0];
+                evt.targets = evt.stocktargets.slice().sortBySeat(target);
+            },
             async content(event, trigger, player) {
                 const { target, targets } = event;
                 let result;
-                if (targets.indexOf(target) == 0) {
+                const evt = event.getParent();
+                if (typeof evt?.ql_xiuyangshengxi_choice !== "number") {
                     result = await target
                         .chooseControl({
                             choiceList: [
@@ -90,10 +96,10 @@ const cardPack = {
                         .forResult();
                     const { index } = result;
                     event.getParent().set("ql_xiuyangshengxi_choice", index);
-                } else if (typeof event.getParent()?.ql_xiuyangshengxi_choice == "number") {
+                } else {
                     result = { index: event.getParent()?.ql_xiuyangshengxi_choice == 0 ? 1 : 0 };
                 }
-                if (typeof result.index == "number") {
+                if (typeof result?.index == "number") {
                     const { index } = result;
                     if (index == 0) {
                         await target.recover();
@@ -103,6 +109,10 @@ const cardPack = {
                         target.addTempSkill("ql_xiuyangshengxi_draw", { player: "phaseBeginStart" });
                     }
                 }
+            },
+            async contentAfter(event, trigger, player) {
+                const evt = event.getParent();
+                delete evt.ql_xiuyangshengxi_choice;
             },
             ai: {
                 basic: {

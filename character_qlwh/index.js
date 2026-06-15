@@ -22,9 +22,13 @@ const characterPack = {
 		qlwh: characterSort,
 	},
 	characterSubstitute: {
+		ql_longge: [
+			["ql_longge_xz", ["ext:五花米线/skin/ql_longge_xz.jpg"]],
+			["ql_longge_bsyy", ["ext:五花米线/skin/ql_longge_bsyy.jpg"]],
+		],
 		ql_weinasi: [
 			["ql_weinasi_xz", ["ext:五花米线/skin/ql_weinasi_xz.jpg"]],
-			["ql_weinasi_xz", ["ext:五花米线/skin/ql_weinasi_xz.jpg"]],
+			["ql_weinasi_zyj", ["ext:五花米线/skin/ql_weinasi_zyj.jpg"]],
 			["ql_weinasi_yxxs", ["ext:五花米线/skin/ql_weinasi_yxxs.jpg"]],
 		],
 	    ql_laotou: [

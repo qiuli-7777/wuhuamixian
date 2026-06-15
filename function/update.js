@@ -52,23 +52,37 @@ export default async (manual = false) => {
     return;
   }
 
-  // 5. 对比本地文件哈希，收集需要更新的文件
-  const needUpdate = [];
+  // 5. 对比本地文件哈希，收集需要更新的文件（优化为分批并发，保留原始顺序）
+  const entries = Object.entries(remoteManifest.files);
+  const needUpdateFlags = new Array(entries.length).fill(false);
   const hex = Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
 
-  for (const [filePath, remoteHash] of Object.entries(remoteManifest.files)) {
-    const localFullPath = `extension/五花米线/${filePath}`;
-    const exists = await game.promises.checkFile(localFullPath);
-    if (!exists) {
-      needUpdate.push(filePath);
-      continue;
-    }
-    try {
-      const buf = await crypto.subtle.digest('SHA-1', await game.promises.readFile(localFullPath));
-      const localHash = Array.from(new Uint8Array(buf), x => hex[x]).join('');
-      if (localHash !== remoteHash) needUpdate.push(filePath);
-    } catch {
-      needUpdate.push(filePath);
+  // 分批并发，每批5个文件
+  for (let i = 0; i < entries.length; i += 5) {
+    const batch = entries.slice(i, i + 5);
+    await Promise.all(batch.map(async ([filePath, remoteHash], idxInBatch) => {
+      const globalIdx = i + idxInBatch;
+      const localFullPath = `extension/五花米线/${filePath}`;
+      const exists = await game.promises.checkFile(localFullPath);
+      if (!exists) {
+        needUpdateFlags[globalIdx] = true;
+        return;
+      }
+      try {
+        const buf = await crypto.subtle.digest('SHA-1', await game.promises.readFile(localFullPath));
+        const localHash = Array.from(new Uint8Array(buf), x => hex[x]).join('');
+        if (localHash !== remoteHash) needUpdateFlags[globalIdx] = true;
+      } catch {
+        needUpdateFlags[globalIdx] = true;
+      }
+    }));
+  }
+
+  // 按原始顺序构建 needUpdate 数组
+  const needUpdate = [];
+  for (let i = 0; i < entries.length; i++) {
+    if (needUpdateFlags[i]) {
+      needUpdate.push(entries[i][0]);
     }
   }
 
@@ -83,7 +97,7 @@ export default async (manual = false) => {
     return;
   }
 
-  // 8. 下载并写入新文件
+  // 8. 下载并写入新文件（保持串行，稳定且进度条简单）
   const prog = createProgress("更新五花米线扩展", needUpdate.length);
   game.importedPack = true;
 

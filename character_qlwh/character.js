@@ -1,4 +1,13 @@
 const characters = {
+	ql_longge: {
+		sex: "male",
+		group: "hua",
+		career: "suwei",
+		hp: 5,
+		skills: ["ql_ruolei", "ql_chuimu", "ql_lg_fulong"],
+		img: "extension/五花米线/skin/ql_longge.jpg",
+		dieAudios: [],
+	},
 	ql_weinasi: {
 		sex: "female",
 		group: "hua",
@@ -7,7 +16,7 @@ const characters = {
 		img: "extension/五花米线/skin/ql_weinasi.jpg",
 		dieAudios: [],
 	},
-    ql_tianwang: {
+	ql_tianwang: {
 		sex: "male",
 		group: "hua",
 		hp: 5,
@@ -114,20 +123,20 @@ const characters = {
 		isUnseen: true,
 		img: "extension/五花米线/skin/ql_linggui.jpg",
 	},
-    ql_liuzhang: {
+	ql_liuzhang: {
 		sex: "male",
 		group: "qun",
 		hp: 4,
-		skills: ["ql_dimou","ql_juni","ql_shouchuan"],
+		skills: ["ql_dimou", "ql_juni", "ql_shouchuan"],
 		img: "extension/五花米线/skin/ql_liuzhang.jpg",
 		dieAudios: ["ext:五花米线/audio/die/ql_liuzhang.mp3"],
 	},
-    ql_jiangwan: {
+	ql_jiangwan: {
 		sex: "male",
 		group: "shu",
 		hp: 3,
 		//career: "qingrui",
-		skills: ["ql_shengxi","ql_zhifa","ql_jianshen"],
+		skills: ["ql_shengxi", "ql_zhifa", "ql_jianshen"],
 		img: "extension/五花米线/skin/ql_jiangwan.jpg",
 		dieAudios: ["ext:五花米线/audio/die/ql_jiangwan.mp3"],
 	},
@@ -136,7 +145,7 @@ const characters = {
 		group: "hua",
 		hp: 4,
 		career: "qingrui",
-		skills: ["ql_yinge", "ql_wanling", "ql_leishang","qlweiye"],
+		skills: ["ql_yinge", "ql_wanling", "ql_leishang", "qlweiye"],
 		img: "extension/五花米线/skin/ql_niuzun.jpg",
 		dieAudios: ["ext:五花米线/audio/die/ql_niuzun.mp3"],
 	},
