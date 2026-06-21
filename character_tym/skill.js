@@ -2,6 +2,291 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** *@type { importCharacterConfig['skill'] } */
 const skills = {
+    //水瑶
+    ql_chouxin: {
+        mod: {
+            cardUsable(card, player) {
+                if(card.storage.ql_chouxin) {
+                    return Infinity;
+                }
+            },
+        },
+        enable: "chooseToUse",
+        getList(event, player) {
+            const slotMap = {
+                sha: 1,
+                wuzhong: 2,
+                guohe: "horse",
+                tao: 5,
+            };
+            return get.inpileVCardList(info => {
+                if(!slotMap.hasOwnProperty(info[2])) {
+                    return false;
+                }
+                const vcard = get.autoViewAs({ name: info[2], nature: info[3], isCard: true, storage: { ql_chouxin: true } });
+                return event.filterCard(vcard, player, event) && player.hasEnabledSlot(slotMap[info[2]]);
+            })
+        },
+        filter(event, player) {
+            return get.info("ql_chouxin").getList(event, player).length > 0;
+        },
+        chooseButton: {
+            dialog(event, player) {
+                const list = get.info("ql_chouxin").getList(event, player);
+                return ui.create.dialog("筹芯", [list, "vcard"], "hidden");
+            },
+            check(button) {
+                const player = get.player();
+                const vcard = get.autoViewAs({ name: info[2], nature: info[3], isCard: true, storage: { ql_chouxin: true } });
+                const value = player.getUseValue(card);
+                return value;
+            },
+            backup(links, player) {
+                return {
+                    viewAs: {
+                        name: links[0][2],
+                        nature: links[0][3],
+                        isCard: true,
+                        storage: {
+                            ql_chouxin: true,
+                        },
+                    },
+                    links: links,
+                    filterCard: () => false,
+                    selectCard: -1,
+                    popname: true,
+                    log: false,
+                    async precontent(event, trigger, player) {
+                        switch(links[0][2]) {
+                            case "sha": {
+                                await player.disableEquip(1);
+                                break;
+                            }
+                            case "wuzhong": {
+                                await player.disableEquip(2);
+                                break;
+                            }
+                            case "guohe": {
+                                await player.disableEquip(3);
+                                await player.disableEquip(4);
+                                break;
+                            }
+                            case "tao": {
+                                await player.disableEquip(5);
+                                break;
+                            }
+                            default: {
+                                player.chat("意料之外的结果");
+                                break;
+                            }
+                        }
+                    },
+                };
+            },
+            prompt(links, player) {
+                return "请选择" + (get.translation(links[0][3]) || "") + get.translation(links[0][2]) + "的目标";
+            },
+        },
+        hiddenCard(player, name) {
+            const slotMap = {
+                sha: 1,
+                wuzhong: 2,
+                guohe: "horse",
+                tao: 5,
+            };
+            if (!slotMap.hasOwnProperty(name)) return false;
+            return player.hasEnabledSlot(slotMap[name]);
+        },
+    },
+    ql_wanjue: {
+        enable: "phaseUse",
+        filter(event, player) {
+            return player.countCards("he", card => {
+                if(get.type(card) != "equip") {
+                    return false;
+                }
+                return player.hasDisabledSlot(get.subtype(card));
+            })
+        },
+        filterCard(card) {
+            const player = get.player();
+            if(get.type(card) != "equip") {
+                return false;
+            }
+            return player.hasDisabledSlot(get.subtype(card));
+        },
+        selectCard: 1,
+        lose: false,
+        discard: false,
+        async content(event, trigger, player) {
+            await player.recast(event.cards);
+            const subtype = get.subtype(event.cards[0]);
+            if(subtype == ("euqip3" || "equip4")) {
+                await player.enableEquip(3);
+                await player.enableEquip(4);
+            } else {
+                await player.enableEquip(subtype);
+            }
+            await player.drawTo(player.maxHp);
+        },
+    },
+    //庞汐
+    ql_shisuo: {
+        global: "ql_shisuo_global",
+        subSkill: {
+            global: {
+                enable: "phaseUse",
+                filter(event, player) {
+                    return game.hasPlayer(current => current.hasSkill("ql_shisuo") && current.isIn()) && player.getStorage("ql_shisuo_used").length < 3;
+                },
+                chooseButton: {
+                    dialog(event, player) {
+                        const list = ["basic", "trick", "equip"].map(type => ["", "", `caoying_${type}`]);
+                        const dialog = ui.create.dialog("拾索", [list, "vcard"], "hidden");
+                        return dialog;
+                    },
+                    check(button) {
+                        return Math.random();
+                    },
+                    filter(button) {
+                        const player = get.player();
+                        return !player.getStorage("ql_shisuo_used").includes(button.link[2].slice(8));
+                    },
+                    backup(links, player) {
+                        return {
+                            filterTarget: (card, player, target) => {
+                                return target.hasSkill("ql_shisuo");
+                            },
+                            selectTarget: 1,
+                            links: links[0][2].slice(8),
+                            log: false,
+                            async content(event, trigger, player) {
+                                const { targets: [target] } = event;
+                                player.addTempSkill("ql_shisuo_used");
+                                player.markAuto("ql_shisuo_used", links[0][2].slice(8));
+                                const list = [];
+                                list.push(get.cardPile(card => get.type2(card) == links[0][2].slice(8)));
+                                list.push(get.cardPile(card => get.type2(card) == links[0][2].slice(8) && !list.includes(card)));
+                                await target.gain(list, "gain2");
+                                const bool = list[0].name == list[1].name;
+                                const result = await target.chooseCardTarget({
+                                    prompt: "交出或弃置两张牌",
+                                    filterCard: () => true,
+                                    selectCard: Math.min(2, target.countCards("he")),
+                                    position: "he",
+                                    filterTarget: (card, player, target) => game.openDoor() ? target != player : (target != player || target == _status.currentPhase),
+                                    selectTarget: game.openDoor() ? [0, 1] : 1,
+                                    forced: true,
+                                }).forResult();
+                                if(result?.targets?.length) {
+                                    if(result.targets[0] != player)await target.give(result.cards, result.targets[0]);
+                                } else {
+                                    await target.discard(result.cards);
+                                }
+                                if(!bool) {
+                                    const result2 = await player.chooseBool("失去一点体力或点取消本回合该技能失效").forResult();
+                                    if(result2.bool) {
+                                        await player.loseHp();
+                                    } else {
+                                        player.tempBanSkill("ql_shisuo_global");
+                                    }
+                                }
+                            },
+                        };
+                    },
+                },
+            },
+            used: {
+                charlotte: true,
+                onremove: true,
+                intro: {
+                    content: "本回合已经选择过#",
+                },
+            },
+        },
+    },
+    ql_culing: {
+        trigger: {
+            player: "dying",
+        },
+        filter(event, player) {
+            return ["basic", "trick", "equip"].every(item => player.getCards("he").map(card => get.type2(card)).unique().includes(item));
+        },
+        async cost(event, trigger, player) {
+            event.result = await player.chooseCard({
+                prompt: "重铸三张类型不同的牌回复体力至一点",
+                filterCard: (card) => {
+                    return ui.selected.cards.every(cardx => get.type2(card) != get.type2(cardx));
+                },
+                selectCard: 3,
+            }).forResult();
+        },
+        async content(event, trigger, player) {
+            await player.recast(event.cards);
+            await player[game.openDoor() ? 'recoverTo' : 'recover'](1);
+        },
+    },
+    //郭知洁
+    ql_guxin: {
+        enable: "chooseToUse",
+        filter(event, player) {
+            return get.inpileVCardList(info => {
+                if(info[0] != "basic") {
+                    return false;
+                }
+                const card = get.autoViewAs({ name: info[2], naturn: info[3] }, "unsure");
+                return event.filterCard(card, player, event);
+            }).length;
+        },
+        chooseButton: {
+            dialog(event, player) {
+                const list = get.inpileVCardList(info => {
+                    if(info[0] != "basic") {
+                        return false;
+                    }
+                    const card = get.autoViewAs({ name: info[2], naturn: info[3] }, "unsure");
+                    return event.filterCard(card, player, event);
+                });
+                const dialog = ui.create.dialog("固心", [list, "vcard"], "hidden");
+                game.players.slice().sortBySeat().forEach(target => {
+                    const str = get.translation(target);
+                    const hs = target.getCards("h", { type: "basic" });
+                    if(hs.length) {
+                        dialog.add(`<div class="text center" style="margin: 0px;">${str}的手牌区</div>`);
+                        dialog.add(hs);
+                    }
+                });
+                return dialog;
+            },
+            select: 2,
+            //check(button) {},
+            filter(button) {
+                const player = get.player();
+                if(Array.isArray(button.link)) {
+                    return ui.selected.buttons.length == 0;
+                }
+                return ui.selected.buttons.length;
+            },
+            backup(links, player) {
+                return {
+                    viewAs: { name: links[0][2], nature: links[0][3], cards: [links[1]] },
+                    log: false,
+                    filterCard: () => false,
+                    selectCard: -1,
+                    links: links,
+                    async precontent(event, trigger, player) {
+                        event.result.cards = event.result.card.cards;
+                        if(get.owner(event.result.card.cards[0]) != player) {
+                            player.tempBanSkill("ql_guxin");
+                        }
+                    },
+                };
+            },
+        },
+        hiddenCard(player, name) {
+            return get.type({name: name}) == "basic";
+        },
+    },
     //沈栀
     ql_kenquan: {
         mark: true,

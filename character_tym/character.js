@@ -1,4 +1,22 @@
 const characters = {
+    ql_shuiyao: {
+        sex: "female",
+        group: "ql_door",
+        hp: 4,
+        skills: ["ql_chouxin", "ql_wanjue"],
+    },
+    ql_pangxi: {
+        sex: "female",
+        group: "ql_door",
+        hp: 3,
+        skills: ["ql_shisuo", "ql_culing"],
+    },
+    ql_guozhijie: {
+        sex: "female",
+        group: "ql_door",
+        hp: 3,
+        skills: ["ql_guxin"],
+    },
     ql_shenzhi: {
         sex: "female",
         group: "ql_door",

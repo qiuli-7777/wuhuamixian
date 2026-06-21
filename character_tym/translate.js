@@ -1,5 +1,24 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const translates = {
+    ql_shuiyao: "水瑶",
+    ql_chouxin: "筹芯",
+    ql_chouxin_info: "若你对应装备栏没有被废除，你可以废除武器栏/防具栏/坐骑栏/宝物栏视为使用一张无次数限制的【杀】/【无中生有】/【过河拆桥】/【桃】。",
+    ql_wanjue: "完诀",
+    ql_wanjue_info: "出牌阶段，你可以重铸一张对应装备栏被废除的装备牌，然后恢复对应装备栏并摸牌至体力上限。",
+    ql_pangxi: "庞汐",
+    ql_shisuo: "拾索",
+    ql_shisuo_info: "每名角色回合各限一次，其于出牌阶段可以声明一个类型，你获得两张该类型的牌并交出或弃置两张牌，若你获得的牌类型不同，其选择一项：①失去一点体力；②本回合该技能失效。",
+    ql_shisuo_append: `<span style='font-family:yuanli'>
+				弱化：若当前回合角色是你，你可以保留获得的牌，你失去弃置的选择
+			</span>`,
+    ql_culing: "簇灵",
+    ql_culing_info: "你进入濒死状态时，可以重铸不同类型的牌各一张回复体力至一点。",
+    ql_culing_append: `<span style='font-family:yuanli'>
+				弱化：回复一点体力
+			</span>`,
+    ql_guozhijie: "郭知洁",
+    ql_guxin: "固心",
+    ql_guxin_info: "你可以将一名角色手牌中一张基本牌当做任意基本牌使用，若不是你的牌，本回合该技能失效。",
     ql_shenzhi: "沈栀",
     ql_kenquan: "恳劝",
     ql_kenquan_info: "转换技，你不因该技能成为牌的目标时，可以视为使用一张无距离限制的，阳：【推心置腹】；阴：【无中生有】。结算后你将此牌置入弃牌堆。",

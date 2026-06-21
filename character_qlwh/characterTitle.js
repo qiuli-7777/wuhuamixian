@@ -9,5 +9,8 @@ const characterTitles = {
     ql_kuisangti: "纳祖芒荣耀",
     ql_tienan: "铁铠冥魂",
     ql_luxian: "圣枪游侠",
+    ql_tianqiuyi: "四海无争",
+    ql_tianwang: "镇宅守界",
+    ql_xishan: "万山旅人",
 };
 export default characterTitles;
