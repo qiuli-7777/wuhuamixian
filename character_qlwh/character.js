@@ -3,6 +3,7 @@ const characters = {
 		sex: "male",
 		group: "hua",
 		hp: 5,
+		isUnseen: true,
 		career: "suwei",
 		skills: ["ql_yunfeng", "ql_feipu"],
 		img: "extension/五花米线/skin/ql_xishan.jpg",

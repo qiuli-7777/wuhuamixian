@@ -98,6 +98,9 @@ const skills = {
             return player.hasEnabledSlot(slotMap[name]);
         },
     },
+    ai: {
+        order: 6,
+    },
     ql_wanjue: {
         enable: "phaseUse",
         filter(event, player) {
@@ -121,7 +124,7 @@ const skills = {
         async content(event, trigger, player) {
             await player.recast(event.cards);
             const subtype = get.subtype(event.cards[0]);
-            if(subtype == ("euqip3" || "equip4")) {
+            if(subtype == "euqip3" || subtype == "equip4") {
                 await player.enableEquip(3);
                 await player.enableEquip(4);
             } else {
@@ -158,10 +161,13 @@ const skills = {
                                 return target.hasSkill("ql_shisuo");
                             },
                             selectTarget: 1,
-                            links: links[0][2].slice(8),
+                            links: links,
                             log: false,
                             async content(event, trigger, player) {
                                 const { targets: [target] } = event;
+                                const links = get.info(event.name).links;
+                                game.log(links);
+                                console.log(links);
                                 player.addTempSkill("ql_shisuo_used");
                                 player.markAuto("ql_shisuo_used", links[0][2].slice(8));
                                 const list = [];
@@ -219,6 +225,7 @@ const skills = {
                     return ui.selected.cards.every(cardx => get.type2(card) != get.type2(cardx));
                 },
                 selectCard: 3,
+                position: "he",
             }).forResult();
         },
         async content(event, trigger, player) {

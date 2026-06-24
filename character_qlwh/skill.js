@@ -119,6 +119,25 @@ const skills = {
 	},
 	//天球仪
 	ql_tianxuan: {
+		mod: {
+			playerEnabled(card, player, target) {
+				return true;
+			},
+			targetEnabled(card, player, target) {
+				return true;
+			},
+			cardEnable() {
+				return true;
+			},
+			cardRespondable() {
+				return true;
+			},
+			cardSavable(card) {
+				if(card.name == "tao") {
+					return true;
+				}
+			},
+		},
 		audio: "ext:五花米线/audio/skill:2",
 		trigger: {
 			global: ["phaseBeforeEnd", "phaseEnd"],
@@ -127,6 +146,7 @@ const skills = {
 		superCharlotte: true,
 		charlotte: true,
 		persevereSkill: true,
+		firstDo: true,
 		filter(event, player, name) {
 			if (name == "phaseBeforeEnd") {
 				return !event.finished && !player.storage.ql_tianxuan_first;
@@ -309,6 +329,7 @@ const skills = {
 				}
 			},
 		},
+		priority: Infinity,
 	},
 	ql_tongshuo: {
 		audio: "ext:五花米线/audio/skill:2",
@@ -317,12 +338,13 @@ const skills = {
 		charlotte: true,
 		persevereSkill: true,
 		forced: true,
+		firstDo: true,
 		mod: {
 			globalFrom(from, to, distance) {
-				return distance - game.countPlayer(target => target._source == from);
+				return distance - (game.countPlayer(target => target._source == from) + from.maxHp);
 			},
 			globalTo(from, to, distance) {
-				return distance + game.countPlayer(target => target._source == to);
+				return distance + (game.countPlayer(target => target._source == to) + to.maxHp);
 			},
 			cardUsable(card, player) {
 				if (player.countMark("ql_tongshuo") < 3 && get.type(card) == "basic") {
@@ -343,9 +365,10 @@ const skills = {
 			player: "useCard",
 		},
 		filter(event, player) {
-			return get.type(event.card) == "basic" && player.countMark("ql_tongshuo") <= 3;
+			return get.type(event.card) == "basic" && player.countMark("ql_tongshuo") < 4;
 		},
 		async content(event, trigger, player) {
+			trigger.untrigger();
 			if (trigger.addCount !== false) {
 				trigger.addCount = false;
 				const stat = player.getStat().card,
@@ -440,7 +463,7 @@ const skills = {
 						return str;
 					}
 				}
-			}
+			},
 		}
 	},
 	ql_zhuyao: {
@@ -802,6 +825,7 @@ const skills = {
 				const { targets } = result2;
 				player.line(targets);
 				player.addTempSkill(event.name + "_clear", { player: "dieAfter" });
+				player.markAuto(event.name + "_clear", targets);
 				targets.forEach(target => {
 					target.addAdditionalSkill(`${event.name}_${player.playerid}`, event.name + "_debuff");
 					target.markAuto(event.name + "_debuff", player);
@@ -819,10 +843,10 @@ const skills = {
 					player: "phaseJieshuBegin",
 				},
 				filter(event, player) {
-					return game.hasPlayer(current => current.getRemovableAdditionalSkills("ql_ruolei") && current != player) && game.openHuanzhang();
+					return game.hasPlayer(current => player.getStorage("ql_ruolei_clear".includes(current))) && game.openHuanzhang();
 				},
 				async content(event, trigger, player) {
-					await game.doAsyncInOrder(game.filterPlayer(current => current.getRemovableAdditionalSkills(event.name.slice(0, -6)) && current != player), async target => {
+					await game.doAsyncInOrder(game.filterPlayer(current => player.getStorage(event.name).includes(current)), async target => {
 						if (target.countGainableCards(player, "he")) {
 							await player.gainPlayerCard(target, "he", "visible");
 						}
@@ -930,7 +954,7 @@ const skills = {
 					source: "damageBegin1",
 				},
 				filter(event, player) {
-					return _status.currentPhase.hasHistory("useCard", evt => get.type2(evt.card) == "trick") && game.openHuanzhang();
+					return _status.currentPhase && _status.currentPhase.hasHistory("useCard", evt => get.type2(evt.card) == "trick") && game.openHuanzhang();
 				},
 				async content(event, trigger, player) {
 					trigger.num += _status.currentPhase.getHistory("useCard", evt => get.type2(evt.card) == "trick").map(evt => evt.card.name).unique().length;
@@ -15430,7 +15454,7 @@ const skills = {
 				return event.card.name == "sha" && player.hp > player.getDamagedHp();
 			}
 			if (name == "damageEnd") {
-				if (!event.source?.isIn() || event.source == player || event.num <= 0) {
+				if (!event.source?.isIn() || event.source == player || event.num <= 0 || get.distance(player, event.source) > 1) {
 					return false;
 				}
 				return game.openZhizhi() || player.hp <= player.getDamagedHp();

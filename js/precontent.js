@@ -529,6 +529,8 @@ export async function precontent(config, pack) {
 							return "bZhong";
 						case "rZhu":
 							return "rZhong";
+						case "nei":
+							return "ql_fellow";
 						default:
 							return identity || "ql_fellow";
 					}
