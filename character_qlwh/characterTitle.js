@@ -1,6 +1,7 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 const characterTitles = {
+    ql_xueqiununuyuweilangpu: "雪原双子",
 	ql_zhaoxin: "德邦总管",
     ql_yaheng: "不落魔锋",
     ql_jianmo: "暗裔剑魔",

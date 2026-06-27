@@ -182,10 +182,17 @@ const skills = {
                                     position: "he",
                                     filterTarget: (card, player, target) => game.openDoor() ? target != player : (target != player || target == _status.currentPhase),
                                     selectTarget: game.openDoor() ? [0, 1] : 1,
+                                    ai1(card) {
+                                        return 8 - get.value(card);
+                                    },
+                                    ai2(target) {
+                                        const att = get.attitude(get.player(), target);
+                                        return att;
+                                    },
                                     forced: true,
                                 }).forResult();
                                 if(result?.targets?.length) {
-                                    if(result.targets[0] != player)await target.give(result.cards, result.targets[0]);
+                                    if(result.targets[0] != target)await target.give(result.cards, result.targets[0]);
                                 } else {
                                     await target.discard(result.cards);
                                 }
@@ -198,7 +205,20 @@ const skills = {
                                     }
                                 }
                             },
+                            ai: {
+                                result: {
+                                    target(player, target) {
+                                        return 2;
+                                    },
+                                },
+                            },
                         };
+                    },
+                    ai: {
+                        order: 1,
+                        result: {
+                            player: 1,
+                        },
                     },
                 },
             },

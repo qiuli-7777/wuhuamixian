@@ -1,4 +1,13 @@
 const characters = {
+	ql_xueqiununuyuweilangpu: {
+		sex: "male",
+		group: "meng",
+		hp: 4,
+		career: "yuanji",
+		skills: ["ql_xueqiu"],
+		img: "extension/五花米线/skin/ql_xueqiununuyuweilangpu.jpg",
+		dieAudios: [],
+	},
 	ql_xishan: {
 		sex: "male",
 		group: "hua",

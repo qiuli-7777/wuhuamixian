@@ -2,6 +2,249 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
+	//努努与威朗普
+	ql_xueqiu: {
+        init(player, skill) {
+            player.setStorage(skill, [0, 1, 2, 3]);
+        },
+        trigger: {
+            player: "loseAfter",
+            global: ["equipAfter","addJudgeAfter","gainAfter","loseAsyncAfter","addToExpansionAfter"],
+        },
+        locked: true,
+        filter(event, player) {
+            if (event.getParent().name == "useCard") {
+                if (player == player.getNext()) {
+                    return false;
+                }
+            } else if (player == player.getPrevious()) {
+                return false;
+            }
+            return event.getl && event.getl(player)?.cards2?.length;
+        },
+        logTarget(event, player) {
+            return player[event.getParent().name == "useCard" ? "getNext" : "getPrevious"]();
+        },
+        async cost(event, trigger, player) {
+            const target = player[trigger.getParent().name == "useCard" ? "getNext" : "getPrevious"]();
+            const choiceList = [`将手牌摸至${get.cnNumber(game.roundNumber)}张（若你不能因此摸牌则你摸两张牌）`, "你与其各增加1点体力上限并回复1点体力", "你与其手牌中的基本牌视为冰【杀】直到受到伤害", `对其造成${1 + player.countMark("ql_xueqiu_effect")}点冰冻伤害并删除此选项`];
+            const list = [];
+            list.push("选项一");
+            list.push("选项二");
+            list.push("选项三");
+            if (player.hasStorage(event.skill, 3)) {
+                list.push("选项四");
+            } else {
+                choiceList[3] = "<span style=\"opacity:0.5\">" + choiceList[3] + "</span>";
+            }
+            event.result = await player
+                .chooseControl(list, "cancel2")
+                .set("prompt", get.prompt(event.skill, target))
+                .set("choiceList", choiceList)
+                .set("ai", () => {
+                    const { player, controls } = get.event();
+                    return controls[get.rand(0, controls.length - 1)];
+                })
+                .forResult();
+            if (event.result?.control != "cancel2") {
+                event.result.cost_data = event.result.index;
+            }
+        },
+        async content(event, trigger, player) {
+            const target = event.targets[0];
+            const num = 1 + player.countMark("ql_xueqiu_effect");
+            player.addSkill("ql_xueqiu_record");
+            player.markAuto("ql_xueqiu_record", event.cost_data);
+            game.broadcastAll(
+	            function (target1, target2) {
+	                game.swapSeat(target1, target2);
+	            },
+	            player,
+	            target
+	        );
+            switch (event.cost_data) {
+                case 0: {
+                    const result = await player.drawTo(game.roundNumber).forResult();
+                    if (!result?.cards || get.itemtype(result.cards) != "cards") {
+                        await player.draw(2);
+                    }
+                }
+                break;
+                case 1: {
+                    await player.gainMaxHp();
+                    await target.gainMaxHp();
+                    await player.recover();
+                    await target.recover();
+                }
+                break;
+                case 2: {
+                    player.addSkill("ql_xueqiu_buff");
+                    target.addSkill("ql_xueqiu_buff");
+                }
+                break;
+                case 3: {
+                    player.unmarkAuto(event.name, 3);
+                    await target.damage(num, "ice");
+                }
+                break;
+            }
+            if (player.getStorage("ql_xueqiu_record").containsAll(0, 1, 2)) {
+                player.removeSkill("ql_xueqiu_record");
+                player.addSkill("ql_xueqiu_effect");
+                player.addMark("ql_xueqiu_effect", 1, false);
+            }
+        },
+        group: ["ql_xueqiu_skip", "ql_xueqiu_use"],
+        subSkill: {
+            skip: {
+                trigger: {
+                    player: "phaseBefore",
+                },
+                forced: true,
+                async content(event, trigger, player) {
+                    trigger.cancel();
+                },
+            },
+            use: {
+                trigger: {
+                    global: "phaseBegin",
+                },
+                locked: true,
+                async cost(event, trigger, player) {
+                    const choiceList = ["你可以无距离次数限制且无视防具的使用牌", "令其本回合仅能使用其当前体力值张牌"];
+                    const list = [];
+                    list.push("选项一");
+                    if (player.hasCards("he", card => lib.filter.cardDiscardable(card, player))) {
+                        list.push("选项二");
+                    } else {
+                        choiceList[1] = "<span style=\"opacity:0.5\">" + choiceList[1] + "</span>";
+                    }
+                    if (!list.length) {
+                        return;
+                    }
+                    event.result = await player
+                        .chooseControl(list, "cancel2")
+                        .set("prompt", get.prompt2(event.skill, trigger.player))
+                        .set("choiceList", choiceList)
+                        .set("ai", () => {
+                            const player = get.player();
+                            const trigger = _status.event.getTrigger();
+                            const controls = get.event().controls.slice();
+                            controls.remove("cancel2");
+                            if (get.attitude(player, trigger.player) < 0 && controls.includes("选项二")) {
+                                return "选项二";
+                            }
+                            return "选项一";
+                        })
+                        .forResult();
+                    if (event.result?.control != "cancel2") {
+                        event.result.cost_data = event.result.index;
+                    }
+                },
+                async content(event, trigger, player) {
+                    if (event.cost_data == 0) {
+                        const num = 1 + player.countMark("ql_xueqiu_effect");
+                        event.count = 0;
+                        while (event.count < num) {
+                            event.count++;
+                            const next = player.chooseToUse(get.prompt(event.name), `你可以无距离次数限制且无视防具的使用一张牌（${event.count}/${num}）`);
+                            next.set("filterTarget", function(card, player, target) {
+                                return lib.filter.targetEnabled.call(this, card, player, target) ?? false;
+                            });
+                            next.set("oncard", (card) => {
+                                card.storage.ql_xueqiu_use = true;
+                            });
+                            const result = await next.forResult();
+                            if (!result?.bool) {
+                                break;
+                            }
+                        }
+                    } else {
+                        await player.chooseToDiscard("he", true);
+                        trigger.player.addTempSkill("ql_xueqiu_debuff");
+                    }
+                },
+                ai: {
+                    unequip: true,
+                    "unequip_ai": true,
+                    skillTagFilter(player, tag, arg) {
+                        if (tag == "unequip_ai") {
+                          if (_status.event.getParent().name != "ql_xueqiu_use") {
+                            return false;
+                          }
+                        } else if (!arg || !arg.card || !arg.card?.storage?.ql_xueqiu_use) {
+                          return false;
+                        }
+                    },
+                },
+            },
+            record: {
+                charlotte: true,
+                onremove: true,
+            },
+            effect: {
+                charlotte: true,
+            },
+            buff: {
+                mark: true,
+                intro: {
+                    content: "你手牌中的基本牌均视为冰【杀】直到你受到伤害后",
+                },
+                mod: {
+                    cardname(card, player, name) {
+                        if (get.type(card, null, false) == "basic") {
+                            return "sha";
+                        }
+                    },
+                    cardnature(card, player) {
+                        if (get.type(card, null, false) == "basic") {
+                            return "ice";
+                        }
+                    },
+                },
+                trigger: {
+                    player: "damageEnd",
+                },
+                forced: true,
+                firstDo: true,
+                charlotte: true,
+                async content(event, trigger, player) {
+                    player.removeSkill(event.name);
+                },
+            },
+            debuff: {
+                charlotte: true,
+                trigger: {
+                    player: "useCard1",
+                },
+                forced: true,
+                popup: false,
+                firstDo: true,
+                onremove: true,
+                filter(event, player) {
+                    return player.countMark("ql_xueqiu_debuff") < player.getHp(true);
+                },
+                async content(event, trigger, player) {
+                    player.addMark(event.name, 1, false);
+                    player.when({ global: "phaseBeginStart" }).then(() => {
+                        player.clearMark("ql_xueqiu_debuff", false);
+                    });
+                },
+                mod: {
+                    cardEnabled(card, player) {
+                        if (player.countMark("ql_xueqiu_debuff") >= player.getHp(true)) return false;
+                    },
+                    cardSavable(card, player) {
+                        if (player.countMark("ql_xueqiu_debuff") >= player.getHp(true)) return false;
+                    },
+                },
+                mark: true,
+                intro: {
+                    content: "本回合仅能使用当前体力值张牌",
+                },
+            },
+        },
+    },
 	//溪山行旅图
 	ql_yunfeng: {
 		trigger: {
