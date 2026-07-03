@@ -1,4 +1,22 @@
 const characters = {
+    ql_nuonuo: {
+        sex: "female",
+        group: "ql_door",
+        hp: 4,
+        skills: ["ql_mingmou"],
+    },
+    ql_xina: {
+        sex: "female",
+        group: "ql_door",
+        hp: 3,
+        skills: ["ql_qiyuan", "ql_sangmo"],
+    },
+    ql_fuling: {
+        sex: "female",
+        group: "ql_door",
+        hp: 4,
+        skills: ["ql_tuitong"],
+    },
     ql_shuiyao: {
         sex: "female",
         group: "ql_door",
@@ -91,6 +109,7 @@ const characters = {
         hp: 4,
         maxHp: 4,
         skills: ["ql_yingci", "ql_lianci", "ql_shuangci"],
+        isUnseen: true,
     },
     ql_qingjiuqiu: {
         sex: "female",

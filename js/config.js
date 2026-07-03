@@ -36,11 +36,11 @@ export let config = {
     	}
     },
     //联机自由点将
-    ql_connect:{
+    /*ql_connect:{
         name: "<font color = '#28e5dd'>联机自由点将</font>",
         init: false,
         intro: "启用后，玩家可在联机进行自由点将",
-    },
+    },*/
     
     // 守卫
     ql_guard: {

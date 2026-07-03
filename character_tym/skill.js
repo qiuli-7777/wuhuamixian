@@ -2,6 +2,233 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** *@type { importCharacterConfig['skill'] } */
 const skills = {
+    //诺诺
+    ql_mingmou: {
+        trigger: {
+            global: "phaseZhunbeiBegin",
+        },
+        async cost(event, trigger, player) {
+            event.result = await trigger.player.chooseTarget()
+            .set("prompt", `选择一名角色并令${get.translation(player)}弃置一张牌并选择一项：①令你本回合使用该颜色的牌没有距离和次数限制；②令你选择的角色不能使用或打出该颜色的手牌。`)
+            .set("filterTarget", (card, player, target) => {
+                return target != get.event().current;
+            })
+            .set("current", trigger.player)
+            .forResult();
+        },
+        async content(event, trigger, player) {
+            const { targets: [target], name } = event;
+            await player.draw();
+            let result = await player.chooseToDiscard("he", "是否弃置一张牌并选择一项").forResult();
+            if(result?.bool) {
+                const color = get.color(result.cards[0]);
+                result = await player.chooseControl()
+                .set("controls", ["选项一", "选项二"])
+                .set("choiceList", [`令${get.translation(trigger.player)}使用${get.translation(color)}牌没有距离和次数限制`, `令${get.translation(target)}不能使用或打出${get.translation(color)}手牌`])
+                .set("choice", Math.random())
+                .forResult();
+                if(result?.index % 2 == 0) {
+                    trigger.player.addTempSkill(name + "_buff");
+                    trigger.player.markAuto(name + "_buff", color);
+                } else {
+                    target.addTempSkill(name + "_debuff");
+                    target.markAuto(name + "_debuff", color);
+                }
+            }
+        },
+        subSkill: {
+            buff: {
+                charlotte: true,
+                onremove: true,
+                intro: {
+                    content: "本回合使用$牌没有距离和次数限制",
+                },
+                mod: {
+                    targetInRange(card, player, target) {
+                        if(get.color(card) == "unsure" || player.getStorage("ql_mingmou_buff").includes(get.color(card))) {
+                            return true;
+                        }
+                    },
+                    cardUsable(card, player, num) {
+                        if(get.color(card) == "unsure" || player.getStorage("ql_mingmou_buff").includes(get.color(card))) {
+                            return Infinity;
+                        }
+                    },
+                },
+            },
+            debuff: {
+                charlotte: true,
+                onremove: true,
+                intro: {
+                    content: "本回合不能使用或打出$手牌",
+                },
+                mod: {
+                    cardEnabled2(card, player) {
+                        if(get.position(card) == "h" && player.getStorage("ql_mingmou_debuff").includes(get.color(card))) {
+                            return false;
+                        }
+                    },
+                },
+            },
+        },
+    },
+    //希娜
+    ql_qiyuan: {
+        onremove(player, skill) {
+            if(player.getExpansions(skill).length) {
+                player.loseToDiscardpile(player.getExpansions(skill));
+            }
+        },
+        intro: {
+            markcount: "expansion",
+            content: "expansion",
+        },
+        mod: {
+            targetEnabled(card, player) {
+                if(card.name == "sha" && player.getExpansions("ql_qiyuan").length) {
+                    return false;
+                }
+            },
+            cardEnabled(card, player) {
+                if(card.name == "sha" && player.getExpansions("ql_qiyuan").length) {
+                    return false;
+                }
+            },
+        },
+        trigger: {
+            global: "phaseDrawBegin2",
+        },
+        filter(event, player) {
+            return !event.numFixed;
+        },
+        async cost(event, trigger, player) {
+            if(player.getExpansions(event.skill).length) {
+                const result = await player.chooseButton([`${get.translation(event.skill)}:交给${get.translation(event.player)}一张牌取消其本次摸牌`, player.getExpansions(event.skill)])
+                .set("ai", button => {
+                    if(get.attitude(get.event().player, get.event().target) <= 0) {
+                        return 6.5 - get.buttonValue(button);
+                    }
+                    return 0;
+                })
+                .set("target", trigger.player)
+                .forResult();
+                if(result?.bool) {
+                    event.result = {
+                        bool: true,
+                        cost_data: result.links,
+                    };
+                }
+            } else {
+                event.result = await player.chooseBool(`${get.translation(event.skill)}: 是否摸一张牌令${get.translation(trigger.player)}额外摸一张牌，然后你与其可以分别将一张牌置于你武将牌上称为“祈愿”。`).forResult();
+            }
+        },
+        async content(event, trigger, player) {
+            const { cost_data: links } = event;
+            if(player.getExpansions(event.name).length) {
+                trigger.num = 0;
+                await player.give(links, trigger.player);
+                await player.draw();
+                return;
+            }
+            await player.draw();
+            trigger.num++;
+            player.when({ global: "phaseDrawEnd" })
+            .filter(evt => evt.player == trigger.player)
+            .step(async (event2, trigger2, player2) => {
+                await game.doAsyncInOrder([player, trigger.player], async current => {
+                    const result = await current.chooseCard("he", 1, `将一张牌置于${get.translation(player)}的武将牌上称为“祈愿”`).forResult();
+                    if(result?.bool) {
+                        const next = player.addToExpansion(result.cards, "gain2");
+                        next.gaintag.add(event.name);
+                        await next;
+                    }
+                })
+            })
+        },
+    },
+    ql_sangmo: {
+        trigger:{
+            global: ["loseAfter", "equipAfter", "addJudgeAfter", "gainAfter", "loseAsyncAfter", "addToExpansionAfter"],
+        },
+        getIndex(event, player) {
+            return game.filterPlayer(target => {
+                if(target.countCards("h") < target.maxHp) {
+                    return event?.getl(target)?.hs?.length;
+                }
+                return false;
+            }).sortBySeat();
+        },
+        filter(event, player, name, target) {
+            game.log(target)
+            return target?.isIn() && player.getExpansions("ql_qiyuan").length;
+        },
+        logTarget(event, player, name, target) {
+            return target;
+        },
+        async cost(event, trigger, player) {
+            const result = await player.chooseButton([`${get.translation(event.skill)}:移去一张“祈愿”牌令其摸两张牌`, player.getExpansions("ql_qiyuan")])
+                .set("ai", button => {
+                    if(get.attitude(get.event().player, get.event().target) > 0) {
+                        return get.buttonValue(button);
+                    }
+                    return 0;
+                })
+                .set("target", trigger.player)
+                .forResult();
+            if(result?.bool) {
+                event.result = {
+                    bool: true,
+                    cost_data: result.links,
+                };
+            }
+        },
+        async content(event, trigger, player) {
+            const { cost_data: links } = event;
+            await player.loseToDiscardpile(links);
+            await player.draw();
+            await event.targets[0].draw(2);
+        },
+    },
+    //茯灵
+    ql_tuitong: {
+        enable: "phaseUse",
+        usable: 1,
+        filterCard(card){
+            if(!ui.selected.cards.length) {
+                return true;
+            }
+            return ui.selected.cards.some(cardx => get.color(card) == get.color(cardx));
+        },
+        selectCard: () => {
+            if(ui.selected.cards.length) {
+                return -1;
+            }
+            return [0, 1];
+        },
+        manualConfirm: true,
+        multitarget: true,
+        multiline: true,
+        filterTarget(card, player, target) {
+            return target.countCards("hej");
+        },
+        selectTarget: [1, Infinity],
+        filterOk: () => {
+            return ui.selected.targets.length;
+        },
+        prompt(event, player) {
+            return `你可以弃置一种颜色所有牌或失去一点体力获得任意名角色区域内一张牌。`;
+        },
+        async content(event, trigger, player) {
+            const { cards, targets } = event;
+            if(!cards.length) {
+                await player.loseHp();
+            }
+            player.line(targets);
+            await game.doAsyncInOrder(targets, async target => {
+                await player.gainPlayerCard(target, "hej");
+            })
+        },
+    },
     //水瑶
     ql_chouxin: {
         mod: {
@@ -166,8 +393,6 @@ const skills = {
                             async content(event, trigger, player) {
                                 const { targets: [target] } = event;
                                 const links = get.info(event.name).links;
-                                game.log(links);
-                                console.log(links);
                                 player.addTempSkill("ql_shisuo_used");
                                 player.markAuto("ql_shisuo_used", links[0][2].slice(8));
                                 const list = [];
@@ -226,7 +451,7 @@ const skills = {
                 charlotte: true,
                 onremove: true,
                 intro: {
-                    content: "本回合已经选择过#",
+                    content: "本回合已经选择过$",
                 },
             },
         },
@@ -1321,6 +1546,7 @@ const skills = {
         },
         async content(event, trigger, player) {
             await player.modedDiscard(event.cards);
+            player.line(trigger.player);
             trigger.num += (game.openDoor() ? event.cards.length * 2 : event.cards.length + 1);
             trigger.player.addTempSkill(event.name + "_effect");
             trigger.player.addMark(event.name + "_effect", event.cards.length, false);
@@ -2843,6 +3069,7 @@ const skills = {
             trigger.cancel();
             if (trigger.name == "damage") {
                 if (trigger?.source?.getCards("he")) {
+                    player.line(trigger.source);
                     await player.discardPlayerCard(trigger.source, "hej", (game.openDoor() ? [1, 2] : 1));
                 }
                 await player.loseHp();
@@ -3177,7 +3404,6 @@ const skills = {
         prompt2() {
             let list = [];
             list.addArray(game.filterPlayer(current => current.isMinHandcard() && current.hasHistory("lose")));
-            //list.push(get.player());
             return `是否与${get.translation(list)}各摸两张牌`;
         },
         filter(event, player) {
@@ -3186,6 +3412,7 @@ const skills = {
         async content(event, trigger, player) {
             let list = [];
             list.addArray(game.filterPlayer(current => current.isMinHandcard() && current.hasHistory("lose")));
+            player.line(list);
             list.push(player);
             await game.asyncDraw(list, 2);
         },
@@ -3205,38 +3432,6 @@ const skills = {
             }
         },
     },
-    /*ql_yaomei: {
-        enable: "phaseUse",
-        usable: 1,
-        filterCard: true,
-        selectCard: [1, Infinity],
-        filterTarget: (card, player, target) => target != player,
-        selectTarget: [1, Infinity],
-        multitarget: true,
-        multiline: true,
-        filterOk: () => ui.selected.cards.length == ui.selected.targets.length,
-        targetprompt() {
-            if(ui.selected.targets.length == 1) {
-                return "主目标";
-            } else {
-                return "分散目标";
-            }
-        },
-        async content(event, trigger, player) {
-            let num = 1, i = 1;
-            while(event.targets.length > i) {
-                const result = await event.targets[i].chooseBool("是否受到一点伤害").forResult();
-                if(result.bool) {
-                    await event.targets[i].damage();
-                } else {
-                    num++;
-                }
-                i++;
-                //game.log("当前i="+i+"总数为"+event.targets.length);
-            }
-            await event.targets[0].damage(num);
-        },
-    },*/
     //桑娅
     ql_pingchou: {
         trigger: {

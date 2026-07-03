@@ -3037,6 +3037,17 @@ const skills = {
 		},
 		async content(event, trigger, player) {
 			const { targets: [target] } = event;
+			game.broadcastAll((bg, bgm) => {
+				if (_status.tempBackground != bg) {
+					_status.tempBackground = bg;
+					game.updateBackground();
+				}
+				if (_status.tempMusic != bgm) {
+					_status.tempMusic = bgm;
+					game.playBackgroundMusic();
+
+				}
+			}, `ext:五花米线/skin/background/麟趾马蹄金.png`, `ext:五花米线/audio/background/麟趾马蹄金.mp3`)
 			target.addSkill(event.name + "_damage");
 			const card = get.autoViewAs({ name: "sha", isCard: true, storage: { [event.name]: true } });
 			const next = player.useCard(target, card, false);
