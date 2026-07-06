@@ -22,6 +22,10 @@ const characterPack = {
 		qlwh: characterSort,
 	},
 	characterSubstitute: {
+		ql_dilou: [
+			["ql_dilou_xz", ["ext:五花米线/skin/ql_dilou_xz.jpg"]],
+			["ql_dilou_glc", ["ext:五花米线/skin/ql_dilou_glc.jpg"]],
+		],
 		ql_xishan: [
 			["ql_xishan_xz", ["ext:五花米线/skin/ql_xishan_xz.jpg"]],
 			["ql_xishan_dljd", ["ext:五花米线/skin/ql_xishan_dljd.jpg"]],

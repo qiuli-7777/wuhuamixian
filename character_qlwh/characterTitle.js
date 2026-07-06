@@ -14,5 +14,6 @@ const characterTitles = {
     ql_tianwang: "镇宅守界",
     ql_xishan: "万山旅人",
     ql_matijin: "良金瑞灵",
+    ql_dilou: "漏箭浮生",
 };
 export default characterTitles;

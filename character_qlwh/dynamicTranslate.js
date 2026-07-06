@@ -1,5 +1,22 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const dynamicTranslates = {
+	ql_shuiying(player, skill) {
+		let str = lib.translate[skill + "_info"];
+		return str.replace("出牌阶段限一次", player.storage[skill] ? "出牌阶段每种花色限一次" : "出牌阶段限一次");
+	},
+	ql_baojian(player, skill) {
+		const bool = player.storage[skill];
+		let yang = "奇数轮，其他角色于摸牌阶段外获得牌后，其选择一项：①展示这些牌且本回合不能对你使用这些牌；②令你回复一点体力（若满血改为摸牌）。若本轮没有角色以此法展示过该点数的牌，你防止你下一次受到的伤害并摸一张牌；",
+			yin = "偶数轮，其他角色于弃牌阶段外失去牌且置入弃牌堆后，当前回合角色对你使用的下一张牌若不与这些牌点数相同，取消之且其需弃置一张牌";
+		if (bool) {
+			yin = `<span class="bluetext">${yin}</span>`;
+		} else {
+			yang = `<span class="firetext">${yang}</span>`;
+		}
+		const start = `转换技，游戏开始时，你获得你手牌中没有的点数的牌各一张。每轮开始时，你增加一点体力上限并令你本局，`,
+			end = "。";
+		return `${start}阳：${yang}；阴：${yin}${end}`;
+	},
 	ql_yongtan(player, skill) {
 		const bool = player.storage[skill];
 		let yang = "出牌阶段，你可以弃置两张牌令一名角色造成伤害+1目改为雷电伤害至其回合结束",

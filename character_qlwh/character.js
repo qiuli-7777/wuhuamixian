@@ -1,4 +1,13 @@
 const characters = {
+	ql_dilou: {
+		sex: "female",
+		group: "hua",
+		hp: 3,
+		career: "goushu",
+		skills: ["ql_baojian", "ql_shuiying", "ql_louke"],
+		img: "extension/五花米线/skin/ql_dilou.jpg",
+		dieAudios: [],
+	},
 	ql_nunu: {
 		sex: "male",
 		group: "meng",
