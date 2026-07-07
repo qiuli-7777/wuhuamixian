@@ -3,6 +3,9 @@ const translates = {
     ql_nuonuo: "诺诺",
     ql_mingmou: "明谋",
     ql_mingmou_info: `一名角色准备阶段，其可以选择一名角色并令你摸一张牌，若如此做，你可以弃置一张牌选择一项：①本回合使用该颜色的牌没有距离和次数限制；②其选择的角色不能使用或打出该颜色的手牌。${get.poptip("rule_beishui")}！本轮该技能失效。`,
+    ql_mingmou_append: `<span style='font-family:yuanli'>
+				弱化：当前回合角色体力值需不大于你，去掉背水
+			</span>`,
     ql_xina: "希娜",
     ql_qiyuan: "祈愿",
     ql_qiyuan_info: "一名角色摸牌阶段，若你武将牌上没有“祈愿“祈愿”牌，你可以令其额外摸一张牌且你摸一张牌，然后该角色和你可以分别将一张牌置于你武将牌上称为“祈愿”牌。若你有“祈愿”牌，你可以交给其一张“祈愿”牌取消本次摸牌。你失去一张“祈愿”牌后摸一张牌。若你有“祈愿”牌，你不能使用【杀】或成为【杀】的目标。",
@@ -18,7 +21,7 @@ const translates = {
     ql_wanjue_info: "出牌阶段，你可以重铸一张对应装备栏被废除的装备牌，然后恢复对应装备栏并摸牌至体力上限。",
     ql_pangxi: "庞汐",
     ql_shisuo: "拾索",
-    ql_shisuo_info: "每名角色回合各限一次，其于出牌阶段可以声明一个类型，你获得两张该类型的牌并交出或弃置两张牌，若你获得的牌类型不同，其选择一项：①失去一点体力；②本回合该技能失效。",
+    ql_shisuo_info: "每名角色回合各限一次，其于出牌阶段可以声明一个类型，你获得两张该类型的牌并交出或弃置两张牌，若你获得的牌牌名不同，其选择一项：①失去一点体力；②本回合该技能失效。",
     ql_shisuo_append: `<span style='font-family:yuanli'>
 				弱化：若当前回合角色是你，你可以保留获得的牌，你失去弃置的选择
 			</span>`,
@@ -33,6 +36,9 @@ const translates = {
     ql_shenzhi: "沈栀",
     ql_kenquan: "恳劝",
     ql_kenquan_info: "转换技，你不因该技能成为牌的目标时，可以视为使用一张无距离限制的，阳：【推心置腹】；阴：【无中生有】。结算后你将此牌置入弃牌堆。",
+    ql_kenquan_append: `<span style='font-family:yuanli'>
+				弱化：阳：成为非锦囊牌目标；阴：成为锦囊牌目标
+			</span>`,
     ql_guitong: "归统",
     ql_guitong_info: "限定技，出牌阶段，你可以令一名其他角色本回合不能使用或打出牌且技能失效，然后你将区域内的伤害牌随机依次当做【杀】对其使用，然后你死亡并分配你的其他技能。",
     ql_guitong_append: `<span style='font-family:yuanli'>
@@ -132,6 +138,9 @@ const translates = {
     ql_xueshuang: "雪霜",
     ql_shuangci: "霜刺",
     ql_shuangci_info: "出牌阶段，你可以失去一点体力标记你已损失体力值+1张牌，你失去一张被标记的牌时摸三张牌，你使用被标记的红色牌无次数限制且不可被响应，被标记的黑色牌无距离限制且伤害+1。",
+    ql_shuangci_append: `<span style='font-family:yuanli'>
+				弱化：摸两张牌
+			</span>`,
     ql_linlingning: "林凌宁",
     ql_jijie: "极界",
     ql_jijie_info: "锁定技，你的体力上限为1.你受到伤害改为流失一点体力并弃置伤害来源两张牌。",

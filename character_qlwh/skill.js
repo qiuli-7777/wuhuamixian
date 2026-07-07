@@ -4,6 +4,9 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const skills = {
 	//铜壶滴漏
 	ql_baojian: {
+		fixed: true,
+		superCharlotte: true,
+		charlotte: true,
 		mark: true,
 		zhuanhuanji: true,
 		marktext: "☯",
@@ -205,6 +208,9 @@ const skills = {
 		},
 	},
 	ql_shuiying: {
+		fixed: true,
+		superCharlotte: true,
+		charlotte: true,
 		enable: "phaseUse",
 		audio: "ext:五花米线/audio/skill:2",
 		usable(skill, player) {
@@ -338,6 +344,9 @@ const skills = {
 		},
 	},
 	ql_louke: {
+		fixed: true,
+		superCharlotte: true,
+		charlotte: true,
 		init(player, skill) {
 			player.storage[skill] = false;
 		},
