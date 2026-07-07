@@ -143,7 +143,7 @@ const translates = {
 			</span>`,
     ql_linlingning: "林凌宁",
     ql_jijie: "极界",
-    ql_jijie_info: "锁定技，你的体力上限为1.你受到伤害改为流失一点体力并弃置伤害来源两张牌。",
+    ql_jijie_info: "锁定技，持恒技，你的体力上限为1.你受到伤害改为流失一点体力并弃置伤害来源两张牌。",
     ql_jijie_append: `<span style='font-family:yuanli'>
 				弱化：弃置伤害来源一张牌
 			</span>`,

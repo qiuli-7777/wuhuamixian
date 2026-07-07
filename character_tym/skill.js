@@ -3084,9 +3084,10 @@ const skills = {
         },
     },
     ql_jijie: {
+        perserveSkill: true,
         forced: true,
         trigger: {
-            player: ["damageBegin3", "dieBegin", "loseMaxHpBegin", "enterGame"],
+            player: ["damageBegin3", "dieBegin", "loseMaxHpBegin", "enterGame", "gainMaxHp"],
             global: "phaseBefore",
         },
         filter(event, player) {
