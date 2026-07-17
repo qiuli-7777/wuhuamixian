@@ -2,6 +2,7 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 import { gelinPack } from "../gelin/gelin.js";
 import { characterPack } from "../character_qlwh/index.js";
 import '../function/Win/win.js';
+import '../function/connect/chooseCharacterOL.js';
 export async function precontent(config, pack) {
 	// ← 接收配置参数
 	//新建势力
@@ -281,6 +282,9 @@ export async function precontent(config, pack) {
 		},
 		openDoor() {
 			return lib.config[`extension_五花米线_ql_Door`] === true;
+		},
+		connectSelect() {
+			return lib.config[`extension_五花米线_ql_connectSelect`];
 		},
 	});
 	//职业相关

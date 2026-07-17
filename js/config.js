@@ -15,6 +15,7 @@ export let config = {
                     `若有报错或疑问，请联系作者：`,
                     `&nbsp;&nbsp;&nbsp;&nbsp;Q：3020421870`,
                     `&nbsp;&nbsp;&nbsp;&nbsp;Q裙：884054958`,
+                    `联机选将仅支持普通军争和休闲斗地主`,
                 ];
 
                 var more = ui.create.div('.help', '<div style="border:2px solid gray"><P align=left>' + log.join('<br>') + '</P>');
@@ -35,12 +36,6 @@ export let config = {
     		game.openWinDialog();
     	}
     },
-    //联机自由点将
-    /*ql_connect:{
-        name: "<font color = '#28e5dd'>联机自由点将</font>",
-        init: false,
-        intro: "启用后，玩家可在联机进行自由点将",
-    },*/
     
     // 守卫
     ql_guard: {
@@ -96,5 +91,17 @@ export let config = {
                   this.innerHTML = `<span style="color:#4caf50;text-decoration: underline">检查更新`;
               }, 2000);
           }
-    }
+    },
+    ql_connectSelect: {
+        name: "联机选将",
+        intro: "调整联机选将方式",
+        frequent: true,
+        init: "none",
+        item: {
+            "none": "不更改选将设置",
+            "balance": "不同将包武将出框率相同",
+            "free": "自由点将",
+            //"boss": "一号位玩家武将框替换为BOSS",
+        },
+    },
 }

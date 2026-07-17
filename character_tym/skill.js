@@ -166,21 +166,20 @@ const skills = {
             }).sortBySeat();
         },
         filter(event, player, name, target) {
-            game.log(target)
             return target?.isIn() && player.getExpansions("ql_qiyuan").length;
         },
         logTarget(event, player, name, target) {
             return target;
         },
         async cost(event, trigger, player) {
-            const result = await player.chooseButton([`${get.translation(event.skill)}:移去一张“祈愿”牌令${get.translation(trigger.player)}摸两张牌`, player.getExpansions("ql_qiyuan")])
+            const result = await player.chooseButton([`${get.translation(event.skill)}:移去一张“祈愿”牌令${get.translation(event.indexedData)}摸两张牌`, player.getExpansions("ql_qiyuan")])
                 .set("ai", button => {
                     if(get.attitude(get.event().player, get.event().target) > 0) {
                         return get.buttonValue(button);
                     }
                     return 0;
                 })
-                .set("target", trigger.player)
+                .set("target", event.indexedData)
                 .forResult();
             if(result?.bool) {
                 event.result = {
@@ -449,7 +448,7 @@ const skills = {
                                         .forResult();
                                 }
                                 if (event.result?.targets?.length) {
-                                    if (event.result.targets[0] != player) {
+                                    if (event.result.targets[0] != source) {
                                         await source.give(event.result.cards, event.result.targets[0]);
                                     }
                                 } else {
@@ -3027,7 +3026,7 @@ const skills = {
             if (type1 != type2) {
                 trigger.getParent().baseDamage++;
             }
-            player.addTempSkill(name + "_discard");
+            player.addSkill(name + "_discard");
             if (!player.getStorage(name + "_discard").includes(type1)) {
                 await player.draw();
                 player.markAuto(name + "_discard", [type1]);
@@ -3035,6 +3034,7 @@ const skills = {
                     .filter(evt => evt.card && get.type2(evt.card) == type1 && evt?.targets.includes(player))
                     .step(async (event, trigger, player) => {
                         await player.draw();
+                        player.unmarkAuto("ql_lianci_discard", [type1]);
                     })
             }
         },

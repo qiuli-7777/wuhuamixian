@@ -1,5 +1,18 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 const dynamicTranslates = {
+	ql_shanhe(player, skill) {
+		const bool = player.storage[skill];
+		let yang = "你可以重新选择一名角色，与其回血时回复值，摸牌时摸牌数和造成伤害时伤害值+1",
+			yin = "与选择的角色各摸三张牌，然后分别将三张牌置于你武将牌上，你与其可以将你武将牌上的牌当做手牌使用或打出";
+		if (bool) {
+			yin = `<span class="bluetext">${yin}</span>`;
+		} else {
+			yang = `<span class="firetext">${yang}</span>`;
+		}
+		const start = `转换技，每轮开始时，`,
+			end = "。";
+		return `${start}阳：${yang}；阴：${yin}${end}`;
+	},
 	ql_shuiying(player, skill) {
 		let str = lib.translate[skill + "_info"];
 		return str.replace("出牌阶段限一次", player.storage[skill] ? "出牌阶段每种花色限一次" : "出牌阶段限一次");

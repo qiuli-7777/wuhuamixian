@@ -2,6 +2,462 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** @type { importCharacterConfig['skill'] } */
 const skills = {
+	//海水江崖炉
+    ql_shanhe: {
+    	global: "ql_shanhe_global",
+        trigger: {
+            global: "roundStart",
+        },
+        popup: false,
+        zhuanhuanji: true,
+        mark: true,
+        intro: {
+            content: storage => `每轮开始时，${storage ? "阳：你可以重新选择一名角色，与其回血时回复值，摸牌时摸牌数和造成伤害时伤害值+1" : "阴：与选择的角色各摸三张牌，然后分别将三张牌置于你武将牌上，你与其可以将你武将牌上的牌当做手牌使用或打出"}`,
+        },
+        filterx(event, player) {
+        	if (player.hasSkill("ql_shanhe", null, null, false)) {
+                return !player.storage.ql_shanhe;
+            }
+            return game.hasPlayer(target => {
+                return target.hasSkill("ql_shanhe", null, null, false) && !player.storage.ql_shanhe && target.storage.ql_shanhe_target == player;
+            });
+        },
+        async cost(event, trigger, player) {
+            if (!player.storage[event.skill]) {
+                event.result = await player
+                    .chooseTarget(get.prompt(event.skill), "选择一名角色，与其回血时回复值，摸牌时摸牌数和造成伤害时伤害值+1")
+                    .set("ai", target => {
+                        const player = get.player();
+                        const att = get.attitude(player, target);
+                        if (att == player) {
+                        	return att / 10;
+                        }
+                        return att;
+                    })
+                    .forResult();
+            } else {
+                event.result = { bool: true };
+            }
+        },
+        async content(event, trigger, player) {
+            player.changeZhuanhuanji(event.name);
+            const skill = "ql_shanhe_target";
+            const source = event.targets?.length ? event.targets[0] : player.storage[skill];
+            player.logSkill(event.name, source?.isIn() ? source : null);
+            if (event?.targets?.length) {
+            	player.removeSkill(skill);
+            	player.addSkill(skill);
+                player.setStorage(skill, source);
+                player.markSkill(skill);
+                event.trigger("ql_shanheChange");
+            } else {
+            	event.trigger("ql_shanheChange");
+                const targets = [player];
+                if (source?.isIn()) {
+                    targets.push(source);
+                }
+                for (const target of targets) {
+                    await target.draw(3);
+                    const result = await target.chooseCard("he", 3, true, `将三张牌置于${get.translation(player)}的武将牌上`).forResult();
+                    if (result?.cards?.length) {
+                        const next = player.addToExpansion(result.cards, target, "give")
+                        next.gaintag.add("ql_shanhe_expansion");
+                        await next;
+                    }
+                }
+            }
+        },
+        onremove(player, skill) {
+        	player.removeSkill("ql_shanhe_target");
+        },
+        subSkill: {
+            target: {
+                trigger: {
+                    global: ["recoverBegin", "drawBegin", "damageBegin1"],
+                },
+                forced: true,
+                locked: false,
+                onremove: true,
+                filter(event, player) {
+                	const target = player.storage.ql_shanhe_target;
+                	if (event.name == "damage") {
+                		return event.source == player || event.source == target;
+                	}
+                    return event.player == player || event.player == target;
+                },
+                async content(event, trigger, player) {
+                    trigger.num++;
+                },
+                intro: {
+                    content: "$",
+                },
+            },
+            expansion: {
+            	intro: {
+		            content: "expansion",
+		            markcount: "expansion",
+		        },
+		        onremove(player, skill) {
+		            var cards = player.getExpansions(skill);
+		            if (cards.length) {
+		                player.loseToDiscardpile(cards);
+		            }
+		        },
+            },
+            tag: {},
+            global: {
+            	trigger: {
+			        player: ["loseEnd","dying","phaseBefore","phaseAfter","dyingAfter","die"],
+			        global: ["equipEnd","addJudgeEnd","gainEnd","loseAsyncEnd","addToExpansionEnd", "ql_shanheChange"],
+			    },
+			    filter(event, player) {
+			        return (game.hasPlayer(target => target.countExpansions("ql_shanhe_expansion")) && event.name != "die") ^ player.hasSkill("ql_shanhe_in");
+			    },
+			    forced: true,
+			    firstDo: true,
+			    silent: true,
+			    forceDie: true,
+			    content() {
+			        if (game.hasPlayer(target => target.countExpansions("ql_shanhe_expansion")) && trigger.name != "die") {
+			            const cards = game
+			                .filterPlayer(target => {
+			                	if (target == player) {
+			                		return target.hasSkill("ql_shanhe", null, null, false) && !target.storage.ql_shanhe;
+			                	}
+			                	return target.hasSkill("ql_shanhe", null, null, false) && !target.storage.ql_shanhe && target.storage.ql_shanhe_target == player;
+			                })
+			                .map(target => target.getExpansions("ql_shanhe_expansion"))
+			                .flat();
+			            const cardsx = cards.map(card => {
+			                const cardx = ui.create.card();
+			                cardx.init(get.cardInfo(card));
+			                cardx._cardid = card.cardid;
+			                return cardx;
+			            });
+			            player.directgains(cardsx, null, "ql_shanhe_tag");
+			            player.addSkill("ql_shanhe_in");
+			        } else {
+			            player.removeSkill("ql_shanhe_in");
+			        }
+			    },
+            },
+            in: {
+	            charlotte: true,
+	            trigger: {
+	                global: ["addToExpansionEnd","gainEnd","loseEnd","equipEnd","addJudgeEnd","loseAsyncEnd"],
+	            },
+	            filter(event, player) {
+	                return (
+	                    event.gaintag?.includes("ql_shanhe_expansion") ||
+	                    Object.values(event.gaintag_map || {})
+	                        ?.flat()
+	                        .includes("ql_shanhe_expansion")
+	                );
+	            },
+	            forced: true,
+	            locked: false,
+	            silent: true,
+	            content() {
+	                "step 0";
+	                const cards2 = player.getCards("s", card => card.hasGaintag("ql_shanhe_tag"));
+	                if (player.isOnline2()) {
+	                    player.send(
+	                        function (cards, player) {
+	                            cards.forEach(i => i.delete());
+	                            if (player == game.me) {
+	                                ui.updatehl();
+	                            }
+	                        },
+	                        cards2,
+	                        player
+	                    );
+	                }
+	                cards2.forEach(i => i.delete());
+	                if (player == game.me) {
+	                    ui.updatehl();
+	                }
+	                "step 1";
+	                const cards = game
+	                    .filterPlayer(target => {
+	                    	if (target == player) {
+		                		return target.hasSkill("ql_shanhe", null, null, false) && !target.storage.ql_shanhe;
+		                	}
+		                	return target.hasSkill("ql_shanhe", null, null, false) && !target.storage.ql_shanhe && target.storage.ql_shanhe_target == player;
+	                    })
+	                    .map(target => target.getExpansions("ql_shanhe_expansion"))
+	                    .flat();
+	                const cardsx = cards.map(card => {
+	                    const cardx = ui.create.card();
+	                    cardx.init(get.cardInfo(card));
+	                    cardx._cardid = card.cardid;
+	                    return cardx;
+	                });
+	                player.directgains(cardsx, null, "ql_shanhe_tag");
+	            },
+	            onremove(player) {
+	                const cards2 = player.getCards("s", card => card.hasGaintag("ql_shanhe_tag"));
+	                if (player.isOnline2()) {
+	                    player.send(
+	                        function (cards, player) {
+	                            cards.forEach(i => i.delete());
+	                            if (player == game.me) {
+	                                ui.updatehl();
+	                            }
+	                        },
+	                        cards2,
+	                        player
+	                    );
+	                }
+	                cards2.forEach(i => i.delete());
+	                if (player == game.me) {
+	                    ui.updatehl();
+	                }
+	            },
+	            group: "ql_shanhe_use",
+	        },
+	        use: {
+	            charlotte: true,
+	            trigger: {
+	                player: ["useCardBefore","respondBefore"],
+	            },
+	            filter(event, player) {
+	                const cards = player.getCards("s", card => card.hasGaintag("ql_shanhe_tag") && card._cardid);
+	                return (
+	                    event.cards &&
+	                    event.cards.some(card => {
+	                        return cards.includes(card);
+	                    })
+	                );
+	            },
+	            forced: true,
+	            popup: false,
+	            firstDo: true,
+	            content() {
+	                const idList = player.getCards("s", card => card.hasGaintag("ql_shanhe_tag")).map(i => i._cardid);
+	                const cards = game
+	                    .filterPlayer()
+	                    .map(target => target.getExpansions("ql_shanhe_expansion"))
+	                    .flat();
+	                const cards2 = [];
+	                for (const card of trigger.cards) {
+	                    const cardx = cards.find(cardx => cardx.cardid == card._cardid);
+	                    if (cardx) {
+	                        cards2.push(cardx);
+	                    }
+	                }
+	                const cards3 = trigger.cards.slice();
+	                trigger.cards = cards2;
+	                trigger.card.cards = cards2;
+	                if (player.isOnline2()) {
+	                    player.send(
+	                        function (cards, player) {
+	                            cards.forEach(i => i.delete());
+	                            if (player == game.me) {
+	                                ui.updatehl();
+	                            }
+	                        },
+	                        cards3,
+	                        player
+	                    );
+	                }
+	                cards3.forEach(i => i.delete());
+	                if (player == game.me) {
+	                    ui.updatehl();
+	                }
+	            },
+	        },
+        },
+    },
+    ql_zhanye: {
+        global: "ql_zhanye_global",
+        trigger: {
+            global: ["recoverEnd", "phaseBegin"],
+        },
+        forced: true,
+        filter(event, player) {
+            const target = player.storage.ql_shanhe_target;
+            if (!target?.isIn()) {
+                return false;
+            }
+            if (event.name == "phase") {
+                return target.maxHp > player.maxHp;
+            }
+            return event.player == target;
+        },
+        filterx(event, player) {
+            if (player.hasSkill("ql_zhanye", null, null, false)) {
+                return game.hasPlayer(target => {
+                    return player.storage.ql_shanhe_target == target && target.maxHp <= player.maxHp;
+                });
+            }
+            return game.hasPlayer(target => {
+                return target.hasSkill("ql_zhanye") && target.storage.ql_shanhe_target == player && target.maxHp > player.maxHp;
+            });
+        },
+        async content(event, trigger, player) {
+            if (trigger.name == "recover") {
+                await player.draw(2);
+                const cards = player.getCards("he");
+                if (!cards.length) {
+                    return;
+                }
+                const result = cards.length == 1 ? { bool: true, cards: cards } : await player.chooseCard("he", true, "选择一张牌置于武将牌上").forResult();
+                if (result?.bool && result?.cards?.length) {
+                    const next = player.addToExpansion(result.cards, player, "give");
+                    next.gaintag.add("ql_shanhe_expansion");
+                    await next;
+                }
+            } else {
+                const targets = [player];
+                const source = player.storage.ql_shanhe_target;
+                if (source?.isIn()) {
+                    targets.push(source);
+                }
+                for (const target of targets) {
+                    await target.draw();
+                    await target.recover();
+                    const skills = player.getSkills(null, false, false).filter((skill) => {
+                        let info = get.info(skill);
+                        if (!info || info.charlotte || !get.is.locked(skill) || get.skillInfoTranslation(skill, player).length == 0) {
+                          return false;
+                        }
+                        return true;
+                    });
+                    if (!skills.length) {
+                        return;
+                    }
+                    const list = skills.map(skill => [
+                        skill,
+                        '<div class="popup text" style="width:calc(100% - 10px);display:inline-block"><div class="skill">' +
+                        (() => {
+                            let str = get.translation(skill);
+                            if (!lib.skill[skill]?.nobracket) str = "【" + str + "】";
+                            return str;
+                        })() +
+                        "</div><div>" +
+                        lib.translate[skill + "_info"] +
+                        "</div></div>",
+                    ]);
+                    const result = await player
+                        .chooseButton(["瞻谒：你可以选择失去一个锁定技", [list, "textbutton"]])
+                        .set("displayIndex", false)
+                        .set("ai", button => {
+                            const player = get.player();
+                            const skills = get.event().listx.slice();
+                            const { link } = button;
+                            if (skills.includes(link)) return 0;
+                            const info = get.info(link);
+                            if (info?.ai?.neg || info?.ai?.halfneg) return 3;
+                            return 0;
+                        })
+                        .set("listx", skills)
+                        .forResult();
+                    if (result?.links?.length) {
+                        await player.removeSkills(result.links);
+                    }
+                }
+            }
+        },
+        subSkill: {
+            global: {
+                trigger: {
+                    player: "useCard",
+                },
+                forced: true,
+                filter(event, player) {
+                    return lib.skill.ql_zhanye.filterx(event, player);
+                },
+                async content(event, trigger, player) {
+                    trigger.directHit.addArray(game.filterPlayer());
+                    if (!trigger.player.hasHistory("lose", function (evt) {
+                        return evt.hs?.length && evt.getParent() == trigger;
+                    })) {
+                        trigger.baseDamage++;
+                    }
+                },
+                ai: {
+                    unequip: true,
+                    "unequip_ai": true,
+                    skillTagFilter(player, tag, arg) {
+                        if (lib.skill.ql_zhanye.filterx(null, player)) {
+                            return true;
+                        }
+                        return false;
+                    },
+                },
+            },
+        },
+    },
+    ql_yinsan: {
+        locked: false,
+        trigger: {
+            global: "phaseJieshuBegin",
+        },
+        direct: true,
+        filter(event, player) {
+        	return player.getExpansions("ql_shanhe_expansion").length;
+        },
+        async content(event, trigger, player) {
+        	const players = [player];
+            const source = player.storage.ql_shanhe_target;
+            if (source?.isIn()) {
+                players.push(source);
+            }
+        	for (const player2 of players) {
+        		const target = trigger.player;
+	            const list = get.inpileVCardList(info => {
+	                if (!["sha", "tao"].includes(info[2])) {
+	                    return false;
+	                }
+	                if (info[3]) {
+	            		return false;
+	            	}
+	                const card = get.autoViewAs({ name: info[2] }, "unsure");
+	                return lib.filter.targetEnabled2(card, player, target);
+	            });
+	            if (!list.length) {
+	                return;
+	            }
+	            const cards = player.getExpansions("ql_shanhe_expansion");
+	            if (!cards.length) {
+	                return;
+	            }
+	            const result = await player2
+	                .chooseButton([get.prompt(event.name), [list, "vcard"]])
+	                .set("ai", button => {
+	                    const { player, target } = get.event();
+	                    return get.effect(target, { name: button.link[2] }, player, player)
+	                })
+	                .set("target", target)
+	                .forResult();
+	            if (result?.links?.length) {
+	                const name = result.links[0][2];
+	                event.result = await player
+	                    .chooseCardButton(`洇散：选择将一张牌当${get.translation(name)}对${get.translation(trigger.player)}使用`, cards)
+	                    .set("ai", button => {
+	                        const { player, target } = get.event();
+	                        const card = get.autoViewAs({ name: get.event().namex }, [button.link]);
+	                        return lib.filter.targetEnabled2(card, player, target);
+	                    })
+	                    .set("target", target)
+	                    .set("namex", name)
+	                    .forResult();
+	                if (event?.result?.links?.length) {
+	                	if (!event.logged) {
+	                		event.logged = true;
+	                		player.logSkill(event.name);
+	                	}
+	                	event.result.cards = event.result.links;
+	                    event.result.cost_data = name;
+	                    const card = get.autoViewAs({ name: event.result.cost_data }, event.result.cards);
+			            if (lib.filter.targetEnabled2(card, player2, target)) {
+			                await player2.useCard(card, event.result.cards, target, false);
+			            }
+	                }
+	            }
+        	}
+        },
+    },
 	//铜壶滴漏
 	ql_baojian: {
 		fixed: true,

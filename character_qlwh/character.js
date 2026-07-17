@@ -1,4 +1,13 @@
 const characters = {
+	ql_jiangyalu: {
+		sex: "female",
+		group: "hua",
+		hp: 3,
+		career: "zhanlue",
+		skills: ["ql_shanhe", "ql_zhanye", "ql_yinsan"],
+		img: "extension/五花米线/skin/ql_jiangyalu.jpg",
+		dieAudios: [],
+	},
 	ql_dilou: {
 		sex: "female",
 		group: "hua",
