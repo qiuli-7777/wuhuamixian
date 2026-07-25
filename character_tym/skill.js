@@ -8,7 +8,7 @@ const skills = {
             global: "phaseZhunbeiBegin",
         },
         filter(event, player) {
-            return event.player.hp <= player.hp || game.openDoor();
+            return event.player.hp >= player.hp || game.openDoor();
         },
         async cost(event, trigger, player) {
             event.result = await trigger.player.chooseTarget()
@@ -26,8 +26,12 @@ const skills = {
             let result = await player.chooseToDiscard("he", "是否弃置一张牌并选择一项").forResult();
             if(result?.bool) {
                 const color = get.color(result.cards[0]);
+                const choice = ["选项一", "选项二"];
+                if(game.openDoor()) {
+                    choice.push("选项三");
+                }
                 result = await player.chooseControl()
-                .set("controls", ["选项一", "选项二"])
+                .set("controls", choice)
                 .set("choiceList", [`令${get.translation(trigger.player)}使用${get.translation(color)}牌没有距离和次数限制`, `令${get.translation(target)}不能使用或打出${get.translation(color)}手牌`])
                 .set("choice", get.rand(0, 1))
                 .forResult();
@@ -35,10 +39,15 @@ const skills = {
                     player.line(trigger.player);
                     trigger.player.addTempSkill(name + "_buff");
                     trigger.player.markAuto(name + "_buff", color);
-                } else {
+                }
+                if(result?.index > 0){
                     player.line(target);
                     target.addTempSkill(name + "_debuff");
                     target.markAuto(name + "_debuff", color);
+                }
+                if(result.control == "背水!") {
+                    player.tempBanSkill(event.name, { global: "roundEnd" })
+                    game.log(player, "的", event.name, "本轮失效了");
                 }
             }
         },
@@ -46,6 +55,7 @@ const skills = {
             buff: {
                 charlotte: true,
                 onremove: true,
+                forced: true,
                 intro: {
                     content: "本回合使用$牌没有距离和次数限制",
                 },
@@ -60,6 +70,15 @@ const skills = {
                             return Infinity;
                         }
                     },
+                },
+                trigger: {
+                    player: "useCardAfter",
+                },
+                filter(event, player) {
+                    return player.getHistory("useCard", evt => evt.card.name == "sha").length >= 5 && !game.openDoor();
+                },
+                async content(event, trigger, player) {
+                    player.removeSkill(event.name, true);
                 },
             },
             debuff: {

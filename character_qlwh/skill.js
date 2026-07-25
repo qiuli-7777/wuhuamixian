@@ -100,7 +100,7 @@ const skills = {
 		        onremove(player, skill) {
 		            var cards = player.getExpansions(skill);
 		            if (cards.length) {
-		                player.loseToDiscardpile(cards);
+		                player.loseToDiscardpil4e(cards);
 		            }
 		        },
             },
@@ -122,9 +122,9 @@ const skills = {
 			            const cards = game
 			                .filterPlayer(target => {
 			                	if (target == player) {
-			                		return target.hasSkill("ql_shanhe", null, null, false) && !target.storage.ql_shanhe;
+			                		return target.hasSkill("ql_shanhe", null, null, false);
 			                	}
-			                	return target.hasSkill("ql_shanhe", null, null, false) && !target.storage.ql_shanhe && target.storage.ql_shanhe_target == player;
+			                	return target.hasSkill("ql_shanhe", null, null, false) && target.storage.ql_shanhe_target == player;
 			                })
 			                .map(target => target.getExpansions("ql_shanhe_expansion"))
 			                .flat();
@@ -180,9 +180,9 @@ const skills = {
 	                const cards = game
 	                    .filterPlayer(target => {
 	                    	if (target == player) {
-		                		return target.hasSkill("ql_shanhe", null, null, false) && !target.storage.ql_shanhe;
+		                		return target.hasSkill("ql_shanhe", null, null, false);
 		                	}
-		                	return target.hasSkill("ql_shanhe", null, null, false) && !target.storage.ql_shanhe && target.storage.ql_shanhe_target == player;
+		                	return target.hasSkill("ql_shanhe", null, null, false) && target.storage.ql_shanhe_target == player;
 	                    })
 	                    .map(target => target.getExpansions("ql_shanhe_expansion"))
 	                    .flat();
@@ -291,7 +291,7 @@ const skills = {
                 });
             }
             return game.hasPlayer(target => {
-                return target.hasSkill("ql_zhanye") && target.storage.ql_shanhe_target == player && target.maxHp > player.maxHp;
+                return target.hasSkill("ql_zhanye") && target.storage.ql_shanhe_target == player && target.maxHp >= player.maxHp;
             });
         },
         async content(event, trigger, player) {
@@ -316,7 +316,7 @@ const skills = {
                 for (const target of targets) {
                     await target.draw();
                     await target.recover();
-                    const skills = player.getSkills(null, false, false).filter((skill) => {
+                    const skills = target.getSkills(null, false, false).filter((skill) => {
                         let info = get.info(skill);
                         if (!info || info.charlotte || !get.is.locked(skill) || get.skillInfoTranslation(skill, player).length == 0) {
                           return false;
@@ -338,7 +338,7 @@ const skills = {
                         lib.translate[skill + "_info"] +
                         "</div></div>",
                     ]);
-                    const result = await player
+                    const result = await target
                         .chooseButton(["瞻谒：你可以选择失去一个锁定技", [list, "textbutton"]])
                         .set("displayIndex", false)
                         .set("ai", button => {
@@ -353,7 +353,7 @@ const skills = {
                         .set("listx", skills)
                         .forResult();
                     if (result?.links?.length) {
-                        await player.removeSkills(result.links);
+                        await target.removeSkills(result.links);
                     }
                 }
             }
@@ -432,7 +432,7 @@ const skills = {
 	                .forResult();
 	            if (result?.links?.length) {
 	                const name = result.links[0][2];
-	                event.result = await player
+	                event.result = await player2
 	                    .chooseCardButton(`洇散：选择将一张牌当${get.translation(name)}对${get.translation(trigger.player)}使用`, cards)
 	                    .set("ai", button => {
 	                        const { player, target } = get.event();
