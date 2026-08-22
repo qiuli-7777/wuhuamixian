@@ -1,5 +1,16 @@
-import { lib, game, ui, get, ai, _status } from "../../../noname.js";
+import { lib, game, ui, get, ai, _status } from "noname";
 const translates = {
+    ql_jiangzhi: "江稚",
+    ql_fengyin: "封音",
+    ql_fengyin_info: "一名角色结束阶段，你可以获得一张本回合进入弃牌堆的牌并弃置一张牌，然后你声明并记录一个基本牌或普通锦囊牌牌名。每回合各限一次：①你可以视为使用或打出一张你记录牌名的牌；②你可以取消一张你记录牌名的牌。",
+    ql_canpu: "残谱",
+    ql_canpu_info: "你造成或受到伤害后，可以选择一项：①将手牌调整至与对方相同；②令对方将体力值失去或回复至与你相同。",
+
+    ql_zhouning: "周凝",
+    ql_juexin: "绝炘",
+    ql_juexin_info: "摸牌阶段，你可以额外摸X张牌，若如此做，这些牌本回合不计入你的手牌上限且不能被使用。",
+    ql_fengran: "烽燃",
+    ql_fengran_info: "出牌阶段每名角色限一次，你可以视为对其使用一张【火攻】。每回合各限一次，①你使用【火攻】结算后，若其未因此受伤，其弃置区域内与展示牌相同花色的所有牌，然后你可以令其摸等量牌②若其因此受伤，你可以令伤害+1。",
     ql_nuonuo: "诺诺",
     ql_mingmou: "明谋",
     ql_mingmou_info: `一名角色准备阶段，其可以选择一名角色并令你摸一张牌，若如此做，你可以弃置一张牌选择一项：①本回合使用该颜色的牌没有距离和次数限制；②其选择的角色不能使用或打出该颜色的手牌。${get.poptip("rule_beishui")}！本轮该技能失效。`,

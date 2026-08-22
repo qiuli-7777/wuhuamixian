@@ -24,5 +24,6 @@ const characterIntro = {
     fuling: "...",
     xina: "...",
     nuonuo: "...",
+    zhouning: "...",
 };
 export default characterIntro;
