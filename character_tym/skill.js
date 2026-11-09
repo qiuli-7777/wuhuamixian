@@ -2,6 +2,214 @@ import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 
 /** *@type { importCharacterConfig['skill'] } */
 const skills = {
+    //邱月蓉
+    ql_xuehen: {
+        mod: {
+            globalFrom(from, to, distance) {
+                const num = from.countCards("h", card => get.is.damageCard(card));
+                return distance - num;
+            },
+        },
+        trigger: {
+            source: "damageBegin1",
+        },
+        forced: true,
+        filter(event, player) {
+            return player.inRange(event.player);
+        },
+        async content(event, trigger, player) {
+            trigger.num++;
+        },
+        group: ["ql_xuehen_distance"],
+        subSkill: {
+            distance: {
+                updateDistanceMap() {
+                    const map = {};
+                    game.countPlayer(current => {
+                        map[current.playerid] ??= {};
+                        game.countPlayer(current2 => {
+                            map[current.playerid][current2.playerid] = current.inRange(current2);
+                        });
+                    });
+                    game.broadcastAll(map => {
+                        _status.xuehenDistanceMap = map;
+                    }, map);
+                    return _status.xuehenDistanceMap;
+                },
+            
+                // 新增：完整定义，返回所有“脱离你攻击范围”的角色数组
+                getOutOfRangePlayers(player) {
+                    if (!_status.xuehenDistanceMap) {
+                        get.info("ql_xuehen_distance").updateDistanceMap();
+                        return [];
+                    }
+                    const map = _status.xuehenDistanceMap[player.playerid] || {};
+                    return game.filterPlayer(current => {
+                        return current.isAlive() &&
+                            map[current.playerid] === true &&
+                            !player.inRange(current)
+                    });
+                },
+            
+                init(player, skill) {
+                    get.info(skill).updateDistanceMap();
+                },
+                trigger: {
+                    //player: "chooseToUseBegin",
+                    global: ["logSkill", "useSkillAfter", "dieAfter", "changeHp", "equipAfter", "changeSkillsAfter", "loseAfter", "loseAsyncAfter", "cardsDiscardAfter"],
+                },
+                /*filter(event, player) {
+                    return get.info("ql_xuehen_distance").getOutOfRangePlayers(player).length > 0;
+                },*/
+                async cost(event, trigger, player) {
+                    const targets = get.info("ql_xuehen_distance").getOutOfRangePlayers(player);
+                    get.info("ql_xuehen_distance").updateDistanceMap();
+                    if(targets.length > 0) {
+                        await game.doAsyncInOrder(targets, async target => {
+                            const result = await target.chooseToGive(player, 2, `交给${get.translation(player)}两张牌否则失去一点体力且本回合不能对${get.translation(player)}使用牌`).forResult();
+                            if(!result.bool) {
+                                await target.loseHp();
+                                target.addTempSkill("ql_xuehen_feng");
+                                target.markAuto("ql_xuehen_feng", player);
+                            }
+                        });
+                    }
+                },
+            },
+        },
+        feng: {
+            charlotte: true,
+            onremove: true,
+            intro: {
+                content: "本回合不能对$使用牌",
+            },
+            mod: {
+			    playerEnabled(card, player, target) {
+				    if (player.getStorage("ql_xuehen").includes(target)) return false;
+			    },
+		    },
+        },
+    },
+    ql_juelu: {
+        mod: {
+            cardUsable(card) {
+                if(card.cards.some(card => card.hasGaintag("ql_juelu"))) {
+                    return Infinity;
+                }
+            },
+        },
+        trigger: {
+            global: "dying",
+        },
+        forced: true,
+        async content(event, trigger, player) {
+            const cards = [];
+            while (cards.length < 2) {
+                const card = get.cardPile(card => {
+                    if (cards.includes(card)) return false;
+                    return trigger.player == player ? !get.is.damageCard(card) : get.is.damageCard(card);
+                });
+                if (card) {
+                    cards.push(card);
+                } else {
+                    break;
+                }
+            }
+            if (cards.length) {
+                await player.gain({
+                        cards: cards,
+                        animate: "gain2",
+                        gaintag: ["ql_juelu"],
+                    });
+            }
+        },
+    },
+    //段雨燕
+    ql_shuhun: {
+        trigger: {
+            player: "phaseJieshuBegin",
+        },
+        onremove: true,
+        async content(event, trigger, player) {
+            await player.draw(game.countPlayer(), "bottom");
+            const num = game.countPlayer2(target => {
+                return target.hasHistory("lose");
+            });
+            if (num == 0) {
+                return;
+            }
+            const result = await player
+                .chooseCard(`数魂：你可以将X张牌置于牌堆顶，或取消失去1点体力`, "he", num)
+                .set("ai", card => {
+                    return 6 - get.value(card);
+                })
+                .forResult();
+            if (result?.bool && result?.cards?.length) {
+                player.markAuto("ql_shuhun", result.cards);
+                await player.lose(result.cards, ui.cardPile, "insert");
+            } else {
+                await player.loseHp();
+            }
+        },
+        group: "ql_shuhun_gain",
+        subSkill: {
+            gain: {
+                trigger: {
+                    global: ["gainAfter","loseAsyncAfter"],
+                },
+                forced: true,
+                locked: false,
+                getIndex(event, player) {
+                    if (event.name === "loseAsync" && event.type !== "gain") return [];
+                    return game.filterPlayer(target => {
+                        return event.getg && event.getg(target)?.length && event.getg(target)?.some(card => player.hasStorage("ql_shuhun", card));
+                    })
+                    .sortBySeat();
+                },
+                filter: (event, player, name, target) => {
+                    return target?.isIn() && !Array.from(ui.cardPile.childNodes).some(card => player.hasStorage("ql_shuhun", card));
+                },
+                logTarget: (event, player, name, target) => target,
+                async content(event, trigger, player) {
+                    const target = event.targets[0];
+                    const cards = trigger.getg(target);
+                    player.unmarkAuto("ql_shuhun", cards);
+                    await target[target == player ? "recover" : "loseHp"]();
+                },
+            },
+        },
+    },
+    ql_shiyou: {
+        trigger: {
+            target: "useCardToTarget",
+        },
+        usable: 1,
+        filter(event, player) {
+            return event.player?.isIn() && get.is.damageCard(event.card);
+        },
+        logTarget: "player",
+        async content(event, trigger, player) {
+            const target = trigger.player;
+            if (player.countCards("h") > target.countCards("h")) {
+                event.result = await player.chooseToDiscard(player.countCards("h") - target.countCards("h"), true).forResult();
+            } else {
+                await player.drawTo(target.countCards("h"));
+            }
+            trigger.getParent().excluded.add(player);
+            game.log(trigger.card, "对", player, "无效");
+            if (event?.result?.cards?.length) {
+                let cards2 = event.result.cards.filterInD();
+                if (cards2.length) {
+                    const result2 = await player.chooseBool(`你可以将${get.translation(cards2)}置于牌堆顶`).forResult();
+                    if (result2.bool) {
+                        cards2.reverse();
+                        await game.cardsGotoPile(cards2, "insert");
+                        game.log(player, "将", cards2, "置于了牌堆顶");
+                    }
+                }
+            }
+        },
+    },
     //江稚
     ql_fengyin: {
         trigger: {
@@ -150,6 +358,7 @@ const skills = {
                 trigger: {
                     global: "useCard",
                 },
+                usable: 1,
                 filter(event, player) {
                     return player.getStorage("ql_fengyin").includes(event.card.name) && event.player != player;
                 },

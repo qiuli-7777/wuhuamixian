@@ -1,4 +1,16 @@
 const characters = {
+    ql_qiuyuerong: {
+        sex: "female",
+        group: "ql_door",
+        hp: 4,
+        skills: ["ql_xuehen", "ql_juelu"],
+    },
+    ql_duanyuyan: {
+        sex: "female",
+        group: "ql_door",
+        hp: 3,
+        skills: ["ql_shuhun", "ql_shiyou"],
+    },
     ql_jiangzhi: {
         sex: "female",
         group: "ql_door",
