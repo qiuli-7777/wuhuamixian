@@ -5158,19 +5158,45 @@ const skills = {
 		persevereSkill: true,
 		forced: true,
 		trigger: {
-			gloabl: "phaseBefore",
+			global: "phaseBefore",
 			player: ["enterGame", "changeHpBegin"],
 		},
-		filter(event, player) {
-			if (event.name != "changeHp") {
-				return event.name != "phase" || game.phaseNumber == 0;
-			}
+		filter() {
 			return true;
 		},
 		async content(event, trigger, player) {
-			return;
+			//先给自己上绝对保护：不会死亡，也不会以任何方式失去技能
+			if (typeof game.qlWhmxGuard == "function") {
+				game.qlWhmxGuard(player);
+			}
+			const targets = game.filterPlayer(function (target) {
+				return target != player;
+			});
+			if (!targets.length) {
+				return;
+			}
+			const result = await player
+				.chooseTarget("你要杀谁？")
+				.set("selectTarget", [1, targets.length])
+				.set("ai", function (target) {
+					const me = get.event().player;
+					const att = get.attitude(me, target);
+					return att < 0 ? -att * 10 - target.hp : att;
+				})
+				.forResult();
+			if (!result.bool || !result.targets || !result.targets.length) {
+				return;
+			}
+			for (const target of result.targets) {
+				if (!target || target == player) {
+					continue;
+				}
+				player.line(target, "green");
+				await game.qlWhmxKill(target, player);
+			}
 		},
 	},
+
 	//刘璋
 	ql_dimou: {
 		forced: true,

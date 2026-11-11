@@ -3,6 +3,7 @@ import { gelinPack } from "../gelin/gelin.js";
 import { characterPack } from "../character_qlwh/index.js";
 import '../function/Win/win.js';
 import '../function/connect/chooseCharacterOL.js';
+import '../function/connect/changeCard.js';
 export async function precontent(config, pack) {
 	// ← 接收配置参数
 	//新建势力
@@ -971,4 +972,499 @@ export async function precontent(config, pack) {
 			return qlwh_card;
 		});*/
 	}
+}
+
+
+/* ==================== 秋礼【五花米线】绝对保护 + 无视技能的强制死亡 ==================== */
+/* 说明：本段只在本扩展内生效，不改本体文件。
+   保护对象是持有 ql_whmx 的角色：
+   1. 不会死亡（拦截 die / game.diex / game.dead 写入，并把从存活列表移除的状态自愈回来）
+   2. 不会失去技能（拦截 removeSkill(含 true)、removeSkills/changeSkills，以及直接改 skills 数组）
+   3. 联机时死亡的数组与界面状态通过 game.broadcastAll 同步到所有客户端 */
+
+const qlWhmxGuards = new Set();
+let qlWhmxTicker = null;
+
+function qlWhmxIsGuard(player) {
+	return !!(player && player._qlWhmxUndying);
+}
+
+//修复循环的 next/previous 指针（被强行移出存活列表时会断链）
+function qlWhmxFixLinks(player) {
+	try {
+		if (!Array.isArray(game.players) || game.players.length < 2) {
+			return;
+		}
+		const index = game.players.indexOf(player);
+		if (index < 0) {
+			return;
+		}
+		player.previous = game.players[(index + game.players.length - 1) % game.players.length];
+		player.next = game.players[(index + 1) % game.players.length];
+		player.previous.next = player;
+		player.next.previous = player;
+	} catch (e) {}
+}
+
+//把技能数组锁住：已有技能不能被删除、覆盖，只能新增
+function qlWhmxGuardSkills(player) {
+	if (player._qlWhmxSkillsGuard) {
+		return;
+	}
+	const real = player.skills;
+	if (!Array.isArray(real)) {
+		return;
+	}
+	player._qlWhmxSkills = real.slice();
+	player._qlWhmxRealSkills = real;
+	const proxy = new Proxy(real, {
+		set(target, property, value) {
+			if (property === "length") {
+				if (typeof value === "number" && value < target.length) {
+					return true;
+				}
+				target.length = value;
+				return true;
+			}
+			if (typeof property === "string" && /^[0-9]+$/.test(property)) {
+				const index = parseInt(property);
+				if (index < target.length) {
+					return true;
+				}
+			}
+			target[property] = value;
+			return true;
+		},
+		deleteProperty(target, property) {
+			if (typeof property === "string" && /^[0-9]+$/.test(property)) {
+				return true;
+			}
+			return delete target[property];
+		},
+	});
+	Object.defineProperty(player, "skills", {
+		configurable: true,
+		enumerable: true,
+		get() {
+			return proxy;
+		},
+		set(value) {
+			if (!Array.isArray(value)) {
+				return;
+			}
+			for (const skill of player._qlWhmxSkills || []) {
+				if (!value.includes(skill)) {
+					value.push(skill);
+				}
+			}
+			real.length = 0;
+			for (const skill of value) {
+				real.push(skill);
+			}
+			player._qlWhmxSkills = real.slice();
+		},
+	});
+	player._qlWhmxSkillsGuard = true;
+}
+
+//被判定死亡时的求生处理：恢复血量、去掉死亡标记、回到存活列表
+function qlWhmxKeepAlive(player) {
+	if (!player) {
+		return;
+	}
+	player._qlWhmxUndying = true;
+	qlWhmxGuards.add(player);
+	try {
+		player.classList.remove("dead");
+		player.classList.remove("turnedover");
+		player.classList.remove("out");
+		if (player.node) {
+			if (player.node.hp) {
+				player.node.hp.show();
+			}
+			if (player.node.count) {
+				player.node.count.show();
+			}
+			if (player.node.equips) {
+				player.node.equips.show();
+			}
+		}
+	} catch (e) {}
+	if (typeof player.hp == "number" && player.hp <= 0) {
+		game.broadcastAll(function (target) {
+			target.hp = 1;
+			if (target.node && target.node.hp) {
+				target.node.hp.show();
+			}
+			if (typeof target.update == "function") {
+				target.update();
+			}
+		}, player);
+	}
+	try {
+		if (_status.dying && typeof _status.dying.remove == "function") {
+			_status.dying.remove(player);
+		}
+	} catch (e) {}
+	if (game.players && game.players.indexOf(player) < 0) {
+		const seat = typeof player._qlWhmxSeat == "number" && player._qlWhmxSeat >= 0 ? player._qlWhmxSeat : game.players.length;
+		game.players.splice(Math.min(seat, game.players.length), 0, player);
+	}
+	try {
+		if (game.dead && game.dead.indexOf(player) >= 0) {
+			game.dead.splice(game.dead.indexOf(player), 1);
+		}
+	} catch (e) {}
+	qlWhmxFixLinks(player);
+}
+
+//给被拦截的 die / dying 返回一个可链式、可 await 的空事件
+//（不能直接返回 this，否则调用方接着 .set(...) 会报错）
+function qlWhmxSilentEvent(player) {
+	const event = {
+		player: player,
+		noDie: true,
+		set() {
+			return event;
+		},
+		setContent() {
+			return event;
+		},
+		finish() {
+			return event;
+		},
+		forResult() {
+			return Promise.resolve({ bool: false, targets: [] });
+		},
+		traverseContent() {},
+		then(resolve, reject) {
+			try {
+				if (typeof resolve == "function") {
+					resolve({ player: player, noDie: true });
+				}
+			} catch (e) {
+				if (typeof reject == "function") {
+					reject(e);
+				}
+			}
+		},
+	};
+	return event;
+}
+
+//拦截死亡入口与夺技入口
+function qlWhmxPatch() {
+	try {
+		const proto = lib.element.Player.prototype;
+		if (proto && !proto._qlWhmxPatched) {
+			const originDie = proto.die;
+			proto.die = function () {
+				if (qlWhmxIsGuard(this)) {
+					qlWhmxKeepAlive(this);
+					return qlWhmxSilentEvent(this);
+				}
+				return originDie.apply(this, arguments);
+			};
+			const originDying = proto.dying;
+			if (typeof originDying == "function") {
+				proto.dying = function () {
+					if (qlWhmxIsGuard(this)) {
+						qlWhmxKeepAlive(this);
+						return qlWhmxSilentEvent(this);
+					}
+					return originDying.apply(this, arguments);
+				};
+			}
+			const originRemoveSkill = proto.removeSkill;
+			proto.removeSkill = function () {
+				if (qlWhmxIsGuard(this)) {
+					return this;
+				}
+				return originRemoveSkill.apply(this, arguments);
+			};
+			proto._qlWhmxPatched = true;
+		}
+	} catch (e) {}
+	try {
+		if (typeof game.diex == "function" && !game.diex._qlWhmxPatched) {
+			const originDiex = game.diex;
+			const diex = function (player) {
+				if (qlWhmxIsGuard(player)) {
+					return;
+				}
+				return originDiex.apply(this, arguments);
+			};
+			diex._qlWhmxPatched = true;
+			game.diex = diex;
+		}
+	} catch (e) {}
+}
+
+//拦截“直接从存活列表移除”和“直接塞进 game.dead”
+function qlWhmxPatchArrays() {
+	try {
+		const players = game.players;
+		if (Array.isArray(players) && !players._qlWhmxRemove && typeof players.remove == "function") {
+			const originRemove = players.remove;
+			players.remove = function (item) {
+				if (qlWhmxIsGuard(item)) {
+					return;
+				}
+				return originRemove.apply(this, arguments);
+			};
+			players._qlWhmxRemove = true;
+		}
+	} catch (e) {}
+	try {
+		const dead = game.dead;
+		if (Array.isArray(dead) && !dead._qlWhmxPush && typeof dead.push == "function") {
+			const originPush = dead.push;
+			dead.push = function () {
+				const items = Array.prototype.slice.call(arguments).filter(function (item) {
+					return !qlWhmxIsGuard(item);
+				});
+				return originPush.apply(this, items);
+			};
+			if (typeof dead.add == "function") {
+				const originAdd = dead.add;
+				dead.add = function () {
+					const items = Array.prototype.slice.call(arguments).filter(function (item) {
+						return !qlWhmxIsGuard(item);
+					});
+					return originAdd.apply(this, items);
+				};
+			}
+			dead._qlWhmxPush = true;
+		}
+	} catch (e) {}
+}
+
+//兜底自愈：技能、血量、死亡标记、存活列表、game.dead
+function qlWhmxRefresh(player) {
+	if (!player || !player._qlWhmxUndying) {
+		return;
+	}
+	let needFix = false;
+	const snapshot = player._qlWhmxSkills;
+	if (snapshot && Array.isArray(player.skills)) {
+		for (const skill of snapshot) {
+			if (!player.skills.includes(skill)) {
+				player.skills.push(skill);
+				needFix = true;
+			}
+		}
+	}
+	try {
+		if (player.classList.contains("dead")) {
+			needFix = true;
+		}
+	} catch (e) {}
+	if (typeof player.hp == "number" && player.hp <= 0) {
+		needFix = true;
+	}
+	if (game.dead && game.dead.indexOf(player) >= 0) {
+		needFix = true;
+	}
+	if (game.players && game.players.indexOf(player) < 0) {
+		needFix = true;
+	}
+	if (!needFix) {
+		return;
+	}
+	game.broadcastAll(function (target) {
+		try {
+			if (typeof target.hp == "number" && target.hp <= 0) {
+				target.hp = 1;
+			}
+			target.classList.remove("dead");
+			target.classList.remove("turnedover");
+			target.classList.remove("out");
+			if (target.node) {
+				if (target.node.hp) {
+					target.node.hp.show();
+				}
+				if (target.node.count) {
+					target.node.count.show();
+				}
+				if (target.node.equips) {
+					target.node.equips.show();
+				}
+			}
+			if (typeof target.update == "function") {
+				target.update();
+			}
+		} catch (e) {}
+	}, player);
+	try {
+		if (game.dead && game.dead.indexOf(player) >= 0) {
+			game.dead.splice(game.dead.indexOf(player), 1);
+		}
+	} catch (e) {}
+	if (game.players && game.players.indexOf(player) < 0) {
+		const seat = typeof player._qlWhmxSeat == "number" && player._qlWhmxSeat >= 0 ? player._qlWhmxSeat : game.players.length;
+		game.players.splice(Math.min(seat, game.players.length), 0, player);
+		qlWhmxFixLinks(player);
+	}
+}
+
+//解除保护（换角色/换局时用，避免把保护带到别的武将身上）
+function qlWhmxRelease(player) {
+	try {
+		player._qlWhmxUndying = false;
+		qlWhmxGuards.delete(player);
+		if (player._qlWhmxSkillsGuard) {
+			const real = player._qlWhmxRealSkills;
+			if (Array.isArray(real)) {
+				//换武将时按当前角色名重建技能，避免把 ql_whmx 带到别的武将身上
+				const skills = [];
+				for (const name of [player.name1, player.name2]) {
+					if (!name || !lib.character || !lib.character[name]) {
+						continue;
+					}
+					for (const skill of lib.character[name].skills || []) {
+						if (!skills.includes(skill)) {
+							skills.push(skill);
+						}
+					}
+				}
+				for (const skill of real) {
+					if (skill != "ql_whmx" && !skills.includes(skill)) {
+						skills.push(skill);
+					}
+				}
+				real.length = 0;
+				for (const skill of skills) {
+					real.push(skill);
+				}
+				try {
+					delete player.skills;
+				} catch (e) {}
+				player.skills = real;
+			}
+			player._qlWhmxSkillsGuard = false;
+		}
+	} catch (e) {}
+}
+
+function qlWhmxTick() {
+	qlWhmxPatch();
+	qlWhmxPatchArrays();
+	if (!qlWhmxGuards.size) {
+		return;
+	}
+	qlWhmxGuards.forEach(function (player) {
+		try {
+			//换了武将就解除保护
+			const currentName = player.name1 || player.name;
+			if (player._qlWhmxName && currentName && currentName !== player._qlWhmxName) {
+				qlWhmxRelease(player);
+				return;
+			}
+			//换局后旧的玩家对象不再守护，避免污染新的一局
+			if (lib.playerOL && player.playerid !== undefined) {
+				const current = lib.playerOL[player.playerid];
+				if (current && current !== player) {
+					qlWhmxRelease(player);
+					return;
+				}
+			}
+			qlWhmxRefresh(player);
+		} catch (e) {}
+	});
+}
+
+//给技能持有者安装保护
+game.qlWhmxGuard = function (player) {
+	if (!player || player._qlWhmxUndying) {
+		return player;
+	}
+	player._qlWhmxUndying = true;
+	player._qlWhmxSeat = Array.isArray(game.players) ? game.players.indexOf(player) : -1;
+	player._qlWhmxName = player.name1 || player.name;
+	qlWhmxGuards.add(player);
+	qlWhmxGuardSkills(player);
+	qlWhmxKeepAlive(player);
+	qlWhmxPatch();
+	qlWhmxPatchArrays();
+	game.log(player, "获得了绝对保护");
+	return player;
+};
+
+game.qlWhmxIsGuarded = qlWhmxIsGuard;
+
+//无视任何技能，把人直接处死（数组操作 + 界面状态在主机和客户端同步执行）
+game.qlWhmxKill = async function (target, source) {
+	if (!target || qlWhmxIsGuard(target)) {
+		return false;
+	}
+	game.broadcastAll(function (target) {
+		try {
+			target.classList.add("dead");
+			if (typeof target.removeLink == "function") {
+				target.removeLink();
+			}
+			target.classList.remove("turnedover");
+			target.classList.remove("out");
+			if (target.node) {
+				if (target.node.count) {
+					target.node.count.innerHTML = "0";
+				}
+				if (target.node.hp) {
+					target.node.hp.hide();
+				}
+				if (target.node.equips) {
+					target.node.equips.hide();
+				}
+				if (target.node.count) {
+					target.node.count.hide();
+				}
+			}
+			if (target.previous && target.next) {
+				target.previous.next = target.next;
+				target.next.previous = target.previous;
+			}
+			if (game.players) {
+				game.players.remove(target);
+			}
+			if (game.dead && !game.dead.includes(target)) {
+				game.dead.push(target);
+			}
+			if (_status.dying) {
+				_status.dying.remove(target);
+			}
+			target.hp = 0;
+			if (typeof target.update == "function") {
+				target.update();
+			}
+		} catch (e) {
+			console.error("五花米线：强制死亡同步失败", e);
+		}
+	}, target);
+	try {
+		if (typeof game.log == "function") {
+			game.log(target, "被", source || "秋礼", "令其立即死亡");
+		}
+	} catch (e) {}
+	//死亡后按本体规则弃掉其所有牌（forceDie 跳过濒死相关的技能）
+	try {
+		const cards = target.getCards("hej");
+		if (cards && cards.length) {
+			await target.discard(cards).set("forceDie", true);
+		}
+	} catch (e) {}
+	try {
+		if (typeof game.checkResult == "function") {
+			game.checkResult();
+		}
+	} catch (e) {}
+	return true;
+};
+
+//模块加载时先拦截一次，之后每隔 120ms 兜底检查
+try {
+	qlWhmxPatch();
+	qlWhmxPatchArrays();
+} catch (e) {}
+if (typeof setInterval == "function" && game && !game._qlWhmxTicker) {
+	game._qlWhmxTicker = setInterval(qlWhmxTick, 120);
 }

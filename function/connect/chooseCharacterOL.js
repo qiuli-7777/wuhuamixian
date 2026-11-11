@@ -1,30 +1,88 @@
 import { lib, game, ui, get, ai, _status } from '../../../../noname.js'
 
-let _originalChooseCharacterOL = game.chooseCharacterOL;
+// ——— 联机选将接管（五花米线） ———
+// 不再直接改 game.chooseCharacterOL 属性：云中守望把它定义成了 configurable:false，
+// 谁后 defineProperty 谁就抛 Cannot redefine property（这就是发给别人必报错的原因）。
+// 本体和云中守望最终都会用 game.createEvent('chooseCharacter' / 'chooseCharacterOL') 建选将事件，
+// 这里拦住这次建事件，换成五花米线自己的选将事件。双方的属性都不动，谁先加载都不冲突。
+const qlRawCreateEvent = game.createEvent.bind(game);
+let qlBuildingEvent = false;
+let qlBuiltEvent = null;
 
-Object.defineProperty(game, 'chooseCharacterOL', {
-	configurable: true,
-	get: function () {
-		const mode = get.mode().slice(0, 1).toUpperCase() + get.mode().slice(1);//首字母大写
-		if (!_status.connectMode || game.connectSelect() == "none" || (_status.mode != "normal" && _status.mode != "2v2" && _status.mode != "3v3")) {
-			return _originalChooseCharacterOL;
-		} else {
-			if (typeof game["ql_chooseCharacter" + mode + "OL"] == "function") {
-				return game["ql_chooseCharacter" + mode + "OL"]();
-			} else {
-				return _originalChooseCharacterOL;
+function qlSelectMode() {
+	if (!_status.connectMode) return null;
+	const select = typeof game.connectSelect === 'function' ? game.connectSelect() : 'none';
+	if (select !== 'free' && select !== 'balance') return null;
+	const mode = get.mode();
+	if (mode === 'identity') {
+		return _status.mode === 'normal' ? 'Identity' : null;
+	}
+	// 斗地主只接休闲斗地主（mode 为 normal，3 人）；欢乐/开黑/兵临/智斗的身份规则不同，不接
+	if (mode === 'doudizhu') {
+		return _status.mode === 'normal' ? 'Doudizhu' : null;
+	}
+	if (mode === 'versus') {
+		return (_status.mode === '2v2' || _status.mode === '3v3') ? 'Versus' : null;
+	}
+	return null;
+}
+
+// 事件里已经写好了五花米线的选将内容，调用方（云中守望 / 本体）随后可能再 setContent 覆盖，
+// 所以把这一次的 setContent 变成空操作；其余 set/goto/finish 保持原样，事件照常进入 flow。
+
+game.createEvent = function (name, ...args) {
+	if (qlBuildingEvent) {
+		const next = qlRawCreateEvent(name, ...args);
+		// 记录 handler 建的第一个事件（身份局紫色/谋略等分支会建别的名字的事件）
+		if (!qlBuiltEvent) qlBuiltEvent = next;
+		return next;
+	}
+	if (name === 'chooseCharacter' || name === 'chooseCharacterOL') {
+		let mode = null;
+		try {
+			mode = qlSelectMode();
+		} catch (e) {
+			console.error('五花米线：判断联机选将模式失败', e);
+			mode = null;
+		}
+		if (mode) {
+			const handler = game['ql_chooseCharacter' + mode + 'OL'];
+			if (typeof handler === 'function') {
+				qlBuildingEvent = true;
+				qlBuiltEvent = null;
+				try {
+					handler();
+				} catch (e) {
+					console.error('五花米线：联机选将接管失败', e);
+				} finally {
+					qlBuildingEvent = false;
+				}
+				if (qlBuiltEvent) {
+					qlBuiltEvent.setContent = function () { return this; };
+					return qlBuiltEvent;
+				}
 			}
 		}
-	},
-	set: function (newFunc) {
-		if (newFunc && newFunc.__ql_modified) {
-			//console.warn('拦截到我们自己的设置，忽略');
-			return;
-		}
-		console.warn('已经拦截其他扩展对 chooseCharacterOL 的修改');
-		_originalChooseCharacterOL = newFunc;
 	}
-});
+	return qlRawCreateEvent(name, ...args);
+};
+
+// 每个将包名额均摊：把 total 个框位平均分给已启用的将包，余数从前往后各 +1
+function qlBalanceList(pool, total) {
+	const packs = (lib.configOL.characterPack || []).slice(0).sort(() => Math.random() - 0.5);
+	const list = [];
+	if (!packs.length) return list;
+	for (let i = 0; i < packs.length; i++) {
+		const keys = Object.keys(lib.characterPack[packs[i]]).filter(key => pool.includes(key));
+		let count = Math.floor(total / packs.length) + (i < total % packs.length ? 1 : 0);
+		if (count > keys.length) count = keys.length;
+		list.push(...keys.randomGets(count));
+	}
+	return list;
+}
+// step 内容由 StepCompiler 用 new Function 重建，只能拿到 game/lib/get 等全局对象，
+// 模块内函数必须挂到 game 上才能在 step 里调用
+game.qlBalanceList = qlBalanceList;
 
 game.ql_chooseCharacterIdentityOL = function () {
 	if (_status.mode == "purple") {
@@ -212,6 +270,7 @@ game.ql_chooseCharacterIdentityOL = function () {
 				if (game.me == zhu) {
 					var dialog = ui.create.characterDialog('heightset').open()
 					dialog.id = id
+					dialog.videoId = id
 				}
 			}, _status.characterlist, event.videoId, game.zhu);
 
@@ -342,6 +401,7 @@ game.ql_chooseCharacterIdentityOL = function () {
 				if (game.me != zhu) {
 					var dialog = ui.create.characterDialog('heightset').open()
 					dialog.id = id
+					dialog.videoId = id
 				}
 			}, event.videoId, game.zhu);
 		}
@@ -400,7 +460,7 @@ game.ql_chooseCharacterIdentityOL = function () {
 			lib.configOL.choose_timeout = Number(num)
 		}, 30)
 		//自由点将开始5
-		if (game.connectSelect() == "free") game.broadcastAll("closeDialog", event.id)
+		if (game.connectSelect() == "free") game.broadcastAll("closeDialog", event.videoId)
 		//自由点将结束5
 		var shen = [];
 		for (var i in result) {
@@ -701,7 +761,257 @@ game.ql_chooseCharacterDoudizhuOL = function () {
 };
 game.ql_chooseCharacterDoudizhuOL.__ql_modified = true;
 game.ql_chooseCharacterVersusOL = function () {
+	const next = game.createEvent("chooseCharacterOL");
+	next.setContent(function () {
+		"step 0"
+		// 2v2 选 1 个，3v3 选 2 个（出场 + 备用）
+		event.selectCount = _status.mode === "3v3" ? 2 : 1;
+		event.videoId = lib.status.videoId++;
+		game.broadcastAll((num) => {
+			lib.configOL.choose_timeout = Number(num);
+		}, 9999);
 
+		if (_status.mode === "3v3") {
+			game.additionaldead = [];
+			game.broadcastAll(function (ref, bool) {
+				ui.arena.classList.add("choose-character");
+				for (var i = 0; i < 6; i++) {
+					ref.side = bool;
+					ref = ref.next;
+					bool = !bool;
+				}
+				for (var i = 0; i < game.players.length; i++) {
+					if (game.players[i].side == game.me.side) {
+						game.players[i].node.identity.firstChild.innerHTML = "友";
+					} else {
+						game.players[i].node.identity.firstChild.innerHTML = "敌";
+					}
+					game.players[i].node.identity.dataset.color = game.players[i].side + "zhu";
+				}
+			}, game.players[0], Math.random() < 0.5);
+			if (game.me.side == undefined) game.me.side = game.players[0].side;
+			_status.onreconnect = [
+				function () {
+					var players = game.players.concat(game.dead);
+					for (var i = 0; i < players.length; i++) {
+						if (players[i].side == game.me.side) {
+							players[i].node.identity.firstChild.innerHTML = "友";
+						} else {
+							players[i].node.identity.firstChild.innerHTML = "敌";
+						}
+					}
+				},
+			];
+		} else {
+			// 2v2 沿用本体的阵营与先手分配
+			var ref = game.players[0];
+			var bool = Math.random() < 0.5;
+			var bool2 = Math.random() < 0.5;
+			ref.side = bool;
+			ref.next.side = bool2;
+			ref.next.next.side = !bool;
+			ref.previous.side = !bool2;
+			var firstChoose = game.players.randomGet();
+			if (firstChoose.next.side == firstChoose.side) {
+				firstChoose = firstChoose.next;
+			}
+			_status.firstAct = firstChoose;
+			for (var i = 0; i < 4; i++) {
+				firstChoose.node.name.innerHTML = get.verticalStr(get.cnNumber(i + 1, true) + "号位");
+				firstChoose = firstChoose.next;
+			}
+			for (var i = 0; i < game.players.length; i++) {
+				if (game.players[i].side == game.me.side) {
+					game.players[i].node.identity.firstChild.innerHTML = "友";
+				} else {
+					game.players[i].node.identity.firstChild.innerHTML = "敌";
+				}
+				game.players[i].node.identity.dataset.color = game.players[i].side + "zhu";
+			}
+			ui.arena.classList.add("choose-character");
+			game.broadcast(
+				function (ref, bool, bool2, firstChoose) {
+					ref.side = bool;
+					ref.next.side = bool2;
+					ref.next.next.side = !bool;
+					ref.previous.side = !bool2;
+					for (var i = 0; i < 4; i++) {
+						firstChoose.node.name.innerHTML = get.verticalStr(get.cnNumber(i + 1, true) + "号位");
+						firstChoose = firstChoose.next;
+					}
+					for (var i = 0; i < game.players.length; i++) {
+						if (game.players[i].side == game.me.side) {
+							game.players[i].node.identity.firstChild.innerHTML = "友";
+						} else {
+							game.players[i].node.identity.firstChild.innerHTML = "敌";
+						}
+						game.players[i].node.identity.dataset.color = game.players[i].side + "zhu";
+					}
+					ui.arena.classList.add("choose-character");
+				},
+				ref,
+				bool,
+				bool2,
+				firstChoose
+			);
+			_status.onreconnect = [
+				function () {
+					var players = game.players.concat(game.dead);
+					for (var i = 0; i < players.length; i++) {
+						if (players[i].side == game.me.side) {
+							players[i].node.identity.firstChild.innerHTML = "友";
+						} else {
+							players[i].node.identity.firstChild.innerHTML = "敌";
+						}
+					}
+				},
+			];
+		}
+
+		event.list = get.charactersOL();
+		_status.characterlist = event.list.slice(0);
+		event.choicesBox = {};
+		var total = _status.mode === "3v3" ? 5 : 6;
+		var choices = [];
+		if (game.connectSelect() == "free") {
+			game.broadcastAll(function (list, id) {
+				_status.characterlist = list;
+				var dialog = ui.create.characterDialog("heightset").open();
+				dialog.id = id;
+				dialog.videoId = id;
+			}, _status.characterlist, event.videoId);
+			for (var i = 0; i < game.players.length; i++) {
+				choices.push([game.players[i], event.videoId, event.selectCount, true]);
+			}
+		} else {
+			// 每个玩家的框互不重复，和本体 randomRemove 的行为一致
+			var pool = event.list.slice(0);
+			for (var i = 0; i < game.players.length; i++) {
+				var box = game.qlBalanceList(pool, total);
+				if (!box.length) box = pool.slice(0).randomGets(Math.min(total, pool.length));
+				if (!box.length) box = event.list.randomGets(Math.min(total, event.list.length));
+				for (var j = 0; j < box.length; j++) {
+					var index = pool.indexOf(box[j]);
+					if (index > -1) pool.splice(index, 1);
+				}
+				event.choicesBox[game.players[i].playerid] = box.slice(0);
+				choices.push([
+					game.players[i],
+					["请选择角色(欢迎加入Q群:884054958一起玩)", [box, "characterx"]],
+					event.selectCount,
+					true,
+				]);
+			}
+		}
+		game.me.chooseButtonOL(choices, function (player, result) {
+			if (game.online || player == game.me) player.init(result.links[0]);
+		}).set("switchToAuto", function () {
+			_status.event.result = "ai";
+		})
+			.set("processAI", function () {
+				return "ai";
+			});
+
+		"step 1"
+		if (!result) result = {};
+		game.broadcastAll((num) => {
+			lib.configOL.choose_timeout = Number(num);
+		}, 30);
+		if (game.connectSelect() == "free") game.broadcastAll("closeDialog", event.videoId);
+
+		var final = {};
+		for (var i in result) {
+			var qlSource = (event.choicesBox && event.choicesBox[i]) || event.list;
+			if (result[i] == "ai" || !result[i] || !result[i].links || !result[i].links.length) {
+				final[i] = qlSource.randomGets(event.selectCount);
+				for (var j = 0; j < final[i].length; j++) {
+					var listx = lib.characterReplace[final[i][j]];
+					if (listx && listx.length) final[i][j] = listx.randomGet();
+				}
+			} else {
+				final[i] = result[i].links.slice(0);
+			}
+			if (!final[i] || !final[i].length) final[i] = qlSource.randomGets(1);
+			for (var j = 0; j < final[i].length; j++) {
+				if (!lib.character[final[i][j]]) final[i][j] = qlSource.randomGet();
+			}
+		}
+
+		game.broadcastAll(function (final, mode) {
+			setTimeout(function () {
+				ui.arena.classList.remove("choose-character");
+			}, 500);
+			if (mode === "3v3") {
+				_status.friendDied = [];
+				_status.enemyDied = [];
+				_status.friend = [];
+				_status.enemy = [];
+				_status.enemyCount = ui.create.system("杀敌: " + get.cnNumber(0, true), null, true);
+				_status.friendCount = ui.create.system("阵亡: " + get.cnNumber(0, true), null, true);
+				lib.setPopped(_status.friendCount, game.versusHoverFriend);
+				lib.setPopped(_status.enemyCount, game.versusHoverEnemy);
+			}
+			for (var i in final) {
+				var player = lib.playerOL[i];
+				if (!player) continue;
+				if (!player.name1) player.init(final[i][0]);
+				player.update();
+				if (mode === "3v3") {
+					var backup = final[i][1] || final[i][0];
+					if (player.side == game.me.side) {
+						_status.friend.push(backup);
+					} else {
+						_status.enemy.push(backup);
+					}
+				}
+			}
+		}, final, _status.mode);
+
+		if (_status.mode === "3v3") {
+			_status.onreconnect = [
+				function (list1, list2, list3, list4, side, func1, func2) {
+					if (side != game.me.side) {
+						var tmp;
+						tmp = list1;
+						list1 = list2;
+						list2 = tmp;
+						tmp = list3;
+						list3 = list4;
+						list4 = tmp;
+					}
+					_status.friendDied = list1;
+					_status.enemyDied = list2;
+					_status.friend = list3;
+					_status.enemy = list4;
+					_status.enemyCount = ui.create.system("杀敌: " + get.cnNumber(_status.enemyDied.length, true), null, true);
+					_status.friendCount = ui.create.system("阵亡: " + get.cnNumber(_status.friendDied.length, true), null, true);
+					lib.setPopped(_status.friendCount, func1);
+					lib.setPopped(_status.enemyCount, func2);
+					for (var i = 0; i < game.players.length; i++) {
+						if (game.players[i].side == game.me.side) {
+							game.players[i].node.identity.firstChild.innerHTML = "友";
+						} else {
+							game.players[i].node.identity.firstChild.innerHTML = "敌";
+						}
+					}
+				},
+				_status.friendDied,
+				_status.enemyDied,
+				_status.friend,
+				_status.enemy,
+				game.me.side,
+				game.versusHoverFriend,
+				game.versusHoverEnemy,
+			];
+		} else {
+			if (lib.configOL.olfeiyang_four) {
+				var qlTarget = _status.firstAct.previous;
+				if (qlTarget.isIn()) qlTarget.addSkill("olfeiyang");
+			}
+			game.addGlobalSkill("versus_viewHandcard");
+		}
+	});
+	return next;
 };
 game.ql_chooseCharacterVersusOL.__ql_modified = true;
 
